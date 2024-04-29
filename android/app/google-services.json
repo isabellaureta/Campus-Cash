@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866856669714",
+    "project_id": "campus-cash-539fd",
+    "storage_bucket": "campus-cash-539fd.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866856669714:android:65ff393870594dd0dbfecb",
+        "android_client_info": {
+          "package_name": "com.example.campus_cash"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqL0sZIy42beMgF_SbtKISl8DRTQessKI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

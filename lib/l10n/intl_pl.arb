@@ -1,0 +1,75 @@
+{
+    "@@locale": "pl",
+
+    "welcome_view_title": "Witaj w Growly!",
+    "welcome_view_growly": "Growly - Grow Your Money",
+    "welcome_view_text": "Nie pozwól, aby Twoje wydatki wymknęły Ci się spod kontroli!",
+    "welcome_view_instructions": "Aby kontynuować, zaloguj się\nlub stwórz nowe konto.",
+    "welcome_view_login_button_text": "Zaloguj się",
+    "welcome_wiev_register_button_text": "Utwórz konto",
+
+    "login_view_welcome_back": "Witaj ponownie!",
+    "login_view_text": "Trzymaj finanse w swoich rękach",
+    "login_view_email_hintText": "Adres email",
+    "login_view_password_hintText": "Hasło",
+    "login_view_forgot_password": "Nie pamiętasz hasła?",
+    "login_view_login_button": "Zaloguj",
+    "login_view_new_account_part1": "Nie masz konta? ",
+    "login_view_new_account_part2": "Utwórz je!",
+
+    "register_view_join_now": "Dołącz już teraz!",
+    "register_view_text": "Kontroluj wydatki jak nigdy wcześniej",
+    "regiser_view_email_hintText": "Adres email",
+    "register_view_password_hintText": "Hasło",
+    "register_view_confirm_password_hintText": "Powtórz hasło",
+    "register_view_register_button": "Utwórz konto",
+    "register_view_have_account_part1": "Masz już konto? ",
+    "register_view_have_account_part2": "Zaloguj się!",
+
+    "verify_email_view_title": "Zweryfikuj swój adres email",
+    "verify_email_view_main_info": "Na podany przez Ciebie adres email został wysłany link aktywacyjny. Proszę, otwórz go, aby zweryfikować swoje konto.",
+    "verify_email_view_if_confirmed": "Jeżeli potwierdziłeś już swój adres email, przejdź do logowania i zaloguj się na swoje konto.",
+    "verify_email_view_not_received": "Wiadomość z linkiem aktywacyjnym\nnie dotarła?\n",
+    "verify_email_view_send_again_text_button": "Kliknij tutaj, aby wysłać wiadomość ponownie!",
+    "verify_email_view_log_in_button": "Logowanie",
+
+    "forgot_password_view_forgot_password": "Zapomniałeś hasła?",
+    "forgot_password_view_dont_worry": "Nie przejmuj się,\nzdarza się najlepszym!",
+    "forgot_password_view_provide_email": "Podaj nam swój adres email, a my prześlemy Ci link do zmiany hasła!",
+    "forgot_password_view_email_hintText": "Adres email",
+    "forgot_password_view_send_button": "Wyślij",
+    "forgot_password_view_back_button": "Powrót",
+    "forgot_password_view_dialog_context": "Coś poszło nie tak i nie mogliśmy wysłać do Ciebie linka do zresetowania hasła.",
+
+    "user_details_view_get_to_know": "Poznajmy się lepiej!",
+    "user_details_view_name_hintText": "Imię",
+    "user_details_view_save_button": "Zapisz",
+
+    "auth_state_loading_text": "Proszę o chwilę zaczekać",
+
+    "dialog_delete": "Usuń",
+    "dialog_are_you_sure_transaction": "Czy na pewno chcesz usunąć tę transakcję?",
+    "dialog_cancel": "Anuluj",
+    "dialog_error": "Wystąpił błąd!",
+    "dialog_logging_out": "Wylogowanie",
+    "dialog_are_you_sure_logout": "Czy na pewno chcesz się wylogować?",
+    "dialog_logout": "Wyloguj",
+    "dialog_password_reset": "Reset hasła",
+    "dialog_link_sent": "Wysłaliśmy link do zresetowania hasła na podany przez Ciebie adres email.",
+    "dialog_unknown_transaction_type": "Nieznany typ transakcji",
+
+    "bottom_navbar_home": "Start",
+    "bottom_navbar_history": "Historia",
+    "bottom_navbar_reports": "Raporty",
+
+    "history_view_title": "Twoje transakcje",
+    "history_view_load_more": "Załaduj więcej",
+    "history_view_end": "To już wszystko",
+    "history_view_swipe_to_delete": "Przesuń, aby usunąć",
+    "history_view_no_description": "Brak opisu",
+    
+    
+    "generic_pln": "zł"
+    
+    
+}
