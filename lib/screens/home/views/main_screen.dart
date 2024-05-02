@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/expense_repository.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +24,20 @@ class MainScreen extends StatefulWidget {
 
 
 class _MainScreenState extends State<MainScreen> {
+  final TextEditingController _totalBalanceController = TextEditingController();
+  final DatabaseReference _balanceRef = FirebaseDatabase.instance.reference().child('balances');
+
+  void _saveDataToFirestore() {
+    _balanceRef.update({
+      'total_balance': double.parse(_totalBalanceController.text),
+    }).then((value) {
+      print('Total balance saved to Firebase');
+    }).catchError((error) {
+      print('Error saving total balance: $error');
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -101,6 +116,7 @@ class _MainScreenState extends State<MainScreen> {
                     )
                   ]
               ),
+
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -113,14 +129,29 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    '₱00.00',
-                    style: TextStyle(
+                  TextFormField(
+                    controller: _totalBalanceController,
+                    style: const TextStyle(
                         fontSize: 40,
                         color: Colors.white,
                         fontWeight: FontWeight.bold
                     ),
+                    decoration: InputDecoration(
+                      hintText: '₱00.00',
+                      hintStyle: TextStyle(
+                          fontSize: 40,
+                          color: Colors.white.withOpacity(0.6),
+                          fontWeight: FontWeight.bold
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    onChanged: (value) {
+                      _saveDataToFirestore();
+                    },
                   ),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     child: Row(
@@ -137,7 +168,7 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               child: const Center(
                                   child: Icon(
-                                    CupertinoIcons.arrow_down,
+                                    CupertinoIcons.arrow_up,
                                     size: 12,
                                     color: Colors.greenAccent,
                                   )
@@ -228,8 +259,8 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-
                   },
+
                   child: Text(
                     'View All',
                     style: TextStyle(
@@ -269,7 +300,7 @@ class _MainScreenState extends State<MainScreen> {
                                       width: 50,
                                       height: 50,
                                       decoration: BoxDecoration(
-                                        color: Color(widget.expenses[i].category.color), // Access category color from widget expenses
+                                        color: Color(widget.expenses[i].category.color),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -295,7 +326,7 @@ class _MainScreenState extends State<MainScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  "\$${widget.expenses[i].amount}.00",
+                                  "\₱${widget.expenses[i].amount}.00",
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Theme.of(context).colorScheme.onBackground,
@@ -331,25 +362,25 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
+  @override
+  void dispose() {
+    _totalBalanceController.dispose();
+    super.dispose();
+  }
 
   void _deleteTransaction(Expense expense) {
-    // Add logic to delete transaction from Firebase
-    // For example:
     FirebaseFirestore.instance
         .collection('expenses')
         .doc(expense.expenseId)
         .delete()
         .then((_) {
-      // Update UI or show message after successful deletion
       setState(() {
         widget.expenses.remove(expense);
-        //expenses.remove(expense); // Remove from local list
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Transaction deleted')),
       );
     }).catchError((error) {
-      // Handle errors
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to delete transaction')),
       );
@@ -360,21 +391,21 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Delete Transaction'),
-          content: Text('Are you sure you want to delete this transaction?'),
+          title: const Text('Delete Transaction'),
+          content: const Text('Are you sure you want to delete this transaction?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 _deleteTransaction(expense); // Call the delete method
                 Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Delete'),
+              child: const Text('Delete'),
             ),
           ],
         );

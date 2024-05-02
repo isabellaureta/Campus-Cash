@@ -80,7 +80,7 @@ class _AddExpenseState extends State<AddExpense> {
                             filled: true,
                             fillColor: Colors.white,
                             prefixIcon: const Icon(
-                              FontAwesomeIcons.dollarSign,
+                              FontAwesomeIcons.pesoSign,
                               size: 16,
                               color: Colors.grey,
                             ),

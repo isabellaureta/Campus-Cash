@@ -45,7 +45,7 @@
     "user_details_view_name_hintText": "Imię",
     "user_details_view_save_button": "Zapisz",
 
-    "auth_state_loading_text": "Proszę o chwilę zaczekać",
+    "auth_state_loading_text": "Please wait a moment",
 
     "dialog_delete": "Usuń",
     "dialog_are_you_sure_transaction": "Czy na pewno chcesz usunąć tę transakcję?",

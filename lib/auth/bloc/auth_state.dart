@@ -8,7 +8,7 @@ abstract class AuthState {
   final String? loadingText;
   const AuthState({
     required this.isLoading,
-    this.loadingText = 'Proszę o chwilę cierpliwości',
+    this.loadingText = 'Please wait a moment',
   });
 }
 
