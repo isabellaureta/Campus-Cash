@@ -1,13 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_repository/expense_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ChartScreen extends StatefulWidget {
-  const ChartScreen({Key? key}) : super(key: key);
+  final List<Expense> expenses;
+
+  const ChartScreen({Key? key, required this.expenses}) : super(key: key);
 
   @override
   _ChartScreenState createState() => _ChartScreenState();
 }
+
 
 class _ChartScreenState extends State<ChartScreen> {
   List<ChartData> chartData = [];
@@ -16,31 +20,34 @@ class _ChartScreenState extends State<ChartScreen> {
   @override
   void initState() {
     super.initState();
-    // Call a function to fetch data from Firebase when the screen initializes
-    fetchDataFromFirebase();
+    generateChartData();
   }
 
-  Future<void> fetchDataFromFirebase() async {
-    try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('categories')
-          .get();
+  void generateChartData() {
+    // Calculate total expenses for each category
+    Map<String, int> categoryExpenses = {};
+    widget.expenses.forEach((expense) {
+      if (categoryExpenses.containsKey(expense.category.name)) {
+        categoryExpenses[expense.category.name] =
+            categoryExpenses[expense.category.name]! + expense.amount;
+      } else {
+        categoryExpenses[expense.category.name] = expense.amount;
+      }
+    });
 
-      List<ChartData> data = querySnapshot.docs.map((doc) {
-        return ChartData(
-          doc['name'], // Category name
-          doc['totalExpenses'], // Total expenses
-          doc['color'], // Color code
-        );
-      }).toList();
+    // Convert the map to a list of ChartData objects
+    List<ChartData> data = [];
+    categoryExpenses.forEach((category, totalExpenses) {
+      // Use a color code based on category name (you can modify this as needed)
+      int colorCode = category.hashCode;
+      data.add(ChartData(category, totalExpenses, colorCode));
+    });
 
-      setState(() {
-        chartData = data;
-      });
-    } catch (error) {
-      print("Error fetching data: $error");
-    }
+    setState(() {
+      chartData = data;
+    });
   }
+
 
 
   @override

@@ -201,9 +201,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
 
-                      body: index == 0
-                          ? MainScreen(expenses: expensesState.expenses)
-                          : const ChartScreen());
+                    body: index == 0
+                        ? MainScreen(expenses: expensesState.expenses)
+                        : ChartScreen(expenses: expensesState.expenses),
+                  );
                 }
 
                 else {
