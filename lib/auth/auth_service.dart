@@ -1,6 +1,6 @@
-import 'package:expenses_tracker/auth/auth_user.dart';
-import 'package:expenses_tracker/auth/firebase_auth_provider.dart';
-import 'package:expenses_tracker/auth/auth_provider.dart';
+import 'package:campuscash/auth/auth_user.dart';
+import 'package:campuscash/auth/firebase_auth_provider.dart';
+import 'package:campuscash/auth/auth_provider.dart';
 
 class AuthService implements AuthProvider {
   final AuthProvider provider;

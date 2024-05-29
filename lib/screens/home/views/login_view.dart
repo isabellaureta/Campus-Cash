@@ -1,11 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:expenses_tracker/auth/auth_exceptions.dart';
-import 'package:expenses_tracker/auth/bloc/auth_bloc.dart';
-import 'package:expenses_tracker/auth/bloc/auth_event.dart';
-import 'package:expenses_tracker/auth/bloc/auth_state.dart';
-import 'package:expenses_tracker/constants/colors.dart';
-import 'package:expenses_tracker/utilities/dialogs/error_dialog.dart';
+import 'package:campuscash/auth/auth_exceptions.dart';
+import 'package:campuscash/auth/bloc/auth_bloc.dart';
+import 'package:campuscash/auth/bloc/auth_event.dart';
+import 'package:campuscash/auth/bloc/auth_state.dart';
+import 'package:campuscash/constants/colors.dart';
+import 'package:campuscash/utilities/dialogs/error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -45,20 +45,21 @@ class _LoginViewState extends State<LoginView> {
           if (state.exception is WrongPasswordAuthException) {
             await showErrorDialog(
               context,
-              'Podane dane są nieprawidłowe!',
+              'The password you entered is incorrect.',
             );
           }
           if (state.exception is UserNotFoundAuthException) {
             await showErrorDialog(
               context,
-              'blablabla',
+              'User not found',
             );
           } else if (state.exception is GenericAuthException) {
             await showErrorDialog(
               context,
-              'Błąd autentykacji blabla',
+              'Something went wrong, please try again',
             );
           }
+          
         }
       },
       child: GestureDetector(
@@ -186,7 +187,6 @@ class _LoginViewState extends State<LoginView> {
                     const SizedBox(
                       height: 25.0,
                     ),
-                    // TODO Sprawdzić przebieg Eventu LogIn (klikając zaloguj wraca do WelcomeView, ale tam jest emit z logged out, wiec sprawdzic)
                     SizedBox(
                       width: 225.0,
                       child: FilledButton(
@@ -228,7 +228,6 @@ class _LoginViewState extends State<LoginView> {
                             text: AppLocalizations.of(context)!
                                 .login_view_new_account_part1,
                             style:
-                                // TODO edit color
                                 const TextStyle(
                                     color: Color.fromARGB(255, 75, 75, 75)),
                             children: [

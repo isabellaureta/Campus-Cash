@@ -1,5 +1,5 @@
-import 'package:expenses_tracker/auth/bloc/auth_bloc.dart';
-import 'package:expenses_tracker/auth/bloc/auth_event.dart';
+import 'package:campuscash/auth/bloc/auth_bloc.dart';
+import 'package:campuscash/auth/bloc/auth_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -35,7 +35,7 @@ class WelcomeView extends StatelessWidget {
                 height: 25.0,
               ),
               Text(
-                AppLocalizations.of(context)!.welcome_view_growly,
+                AppLocalizations.of(context)!.welcome_view,
                 textAlign: TextAlign.center,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -102,7 +102,7 @@ class WelcomeView extends StatelessWidget {
                   ),
                   child: Text(
                     AppLocalizations.of(context)!
-                        .welcome_wiev_register_button_text,
+                        .welcome_view_register_button_text,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w500,

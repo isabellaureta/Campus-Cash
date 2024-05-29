@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:expenses_tracker/helpers/loading_screen_controller.dart';
+import 'package:campuscash/helpers/loading_screen_controller.dart';
 import 'package:flutter/material.dart';
 
 class LoadingScreen {

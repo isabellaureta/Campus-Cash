@@ -1,29 +1,27 @@
 import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
-import 'package:expenses_tracker/app.dart';
-import 'package:expenses_tracker/firebase_options.dart';
-import 'package:expenses_tracker/screens/home/views/home_screen.dart';
+import 'package:campuscash/firebase_options.dart';
+import 'package:campuscash/screens/home/views/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'app_view.dart';
-import 'simple_bloc_observer.dart';
+import 'simpleBlocObserver.dart';
 
 
-import 'package:expenses_tracker/auth/bloc/auth_bloc.dart';
-import 'package:expenses_tracker/auth/bloc/auth_event.dart';
-import 'package:expenses_tracker/auth/bloc/auth_state.dart';
-import 'package:expenses_tracker/auth/firebase_auth_provider.dart';
-import 'package:expenses_tracker/constants/routes.dart';
-import 'package:expenses_tracker/helpers/loading_screen.dart';
-import 'package:expenses_tracker/screens/home/views/forgot_password_view.dart';
-//import 'package:expenses_tracker/views/history_view.dart';
-import 'package:expenses_tracker/screens/home/views/login_view.dart';
-//import 'package:expenses_tracker/views/bottom_navbar_view.dart';
-//import 'package:budget_planner_racka/views/user_details_view.dart';
-import 'package:expenses_tracker/screens/home/views/register_view.dart';
-import 'package:expenses_tracker/screens/home/views/verify_email_view.dart';
-import 'package:expenses_tracker/screens/home/views/welcome_view.dart';
+import 'package:campuscash/auth/bloc/auth_bloc.dart';
+import 'package:campuscash/auth/bloc/auth_event.dart';
+import 'package:campuscash/auth/bloc/auth_state.dart';
+import 'package:campuscash/auth/firebase_auth_provider.dart';
+import 'package:campuscash/helpers/loading_screen.dart';
+import 'package:campuscash/screens/home/views/forgot_password_view.dart';
+//import 'package:campuscash/views/history_view.dart';
+import 'package:campuscash/screens/home/views/login_view.dart';
+//import 'package:campuscash/views/bottom_navbar_view.dart';
+//import 'package:campuscash/views/user_details_view.dart';
+import 'package:campuscash/screens/home/views/register_view.dart';
+import 'package:campuscash/screens/home/views/verify_email_view.dart';
+import 'package:campuscash/screens/home/views/welcome_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 

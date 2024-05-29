@@ -1,7 +1,7 @@
-import 'package:expenses_tracker/auth/auth_exceptions.dart';
-import 'package:expenses_tracker/auth/auth_provider.dart';
-import 'package:expenses_tracker/auth/auth_user.dart';
-import 'package:expenses_tracker/firebase_options.dart';
+import 'package:campuscash/auth/auth_exceptions.dart';
+import 'package:campuscash/auth/auth_provider.dart';
+import 'package:campuscash/auth/auth_user.dart';
+import 'package:campuscash/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart'
     show FirebaseAuth, FirebaseAuthException;
@@ -25,7 +25,7 @@ class FirebaseAuthProvider implements AuthProvider {
       }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        throw EmailAlreadyInUserAuthException();
+        throw EmailAlreadyInUseAuthException();
       } else if (e.code == 'weak-password') {
         throw WeakPasswordAuthException();
       } else if (e.code == 'invalid-email') {

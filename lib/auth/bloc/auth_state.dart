@@ -1,4 +1,4 @@
-import 'package:expenses_tracker/auth/auth_user.dart';
+import 'package:campuscash/auth/auth_user.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 

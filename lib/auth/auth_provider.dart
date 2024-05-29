@@ -1,4 +1,4 @@
-import 'package:expenses_tracker/auth/auth_user.dart';
+import 'package:campuscash/auth/auth_user.dart';
 
 abstract class AuthProvider {
   AuthUser? get currentUser;

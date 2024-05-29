@@ -1,16 +1,15 @@
 {
     "@@locale": "en",
-
-    "welcome_view_title": "Welcome to Campus Cash!",
-    "welcome_view_growly": "Campus Cash",
+"welcome_view_title": "Welcome to Campus Cash!",
+    "welcome_view": "Campus Cash",
     "welcome_view_text": "Empowering Students, One Budget at a Time.",
     "welcome_view_instructions": "To continue, log in or create a new account.",
     "welcome_view_login_button_text": "Log in",
-    "welcome_wiev_register_button_text": "Register",
+    "welcome_view_register_button_text": "Register",
 
     "login_view_welcome_back": "Welcome back!",
     "login_view_text": "Keep your finances in your hands",
-    "login_view_email_hintText": "Email adress",
+    "login_view_email_hintText": "Email address",
     "login_view_password_hintText": "Password",
     "login_view_forgot_password": "Forgot password?",
     "login_view_login_button": "Log in",
@@ -18,8 +17,8 @@
     "login_view_new_account_part2": "Create one!",
 
     "register_view_join_now": "Join now!",
-    "register_view_text": "Navigate college finances with confidence",
-    "regiser_view_email_hintText": "Email adress",
+    "register_view_text": "Take control of your expenses like never before",
+    "register_view_email_hintText": "Email adress",
     "register_view_password_hintText": "Password",
     "register_view_confirm_password_hintText": "Confirm password",
     "register_view_register_button": "Register",
@@ -36,7 +35,7 @@
     "forgot_password_view_forgot_password": "Forgot password?",
     "forgot_password_view_dont_worry": "Don't worry about it,\nit happens to the best of us!",
     "forgot_password_view_provide_email": "Provide us with your email address, and we will send you a link to change your password!",
-    "forgot_password_view_email_hintText": "Email adress",
+    "forgot_password_view_email_hintText": "Email address",
     "forgot_password_view_send_button": "Send",
     "forgot_password_view_back_button": "Back",
     "forgot_password_view_dialog_context": "Something went wrong, and we couldn't send you the password reset link.",
@@ -56,19 +55,11 @@
     "dialog_logout": "Log out",
     "dialog_password_reset": "Password reset",
     "dialog_link_sent": "We have sent a password reset link to the email address you provided.",
-    "dialog_unknown_transaction_type": "Nieznany typ transakcji",
 
     "bottom_navbar_home": "Home",
     "bottom_navbar_history": "History",
     "bottom_navbar_reports": "Reports",
 
-    "history_view_title": "Twoje transakcje",
-    "history_view_load_more": "Załaduj więcej",
-    "history_view_end": "To już wszystko",
-    "history_view_swipe_to_delete": "Przesuń, aby usunąć",
-    "history_view_no_description": "Brak opisu",
-    
-    
     "generic_pln": "zł"
 
 }

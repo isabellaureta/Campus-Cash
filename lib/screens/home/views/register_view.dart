@@ -1,16 +1,14 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:expenses_tracker/auth/auth_exceptions.dart';
-import 'package:expenses_tracker/auth/bloc/auth_bloc.dart';
-import 'package:expenses_tracker/auth/bloc/auth_event.dart';
-import 'package:expenses_tracker/auth/bloc/auth_state.dart';
-import 'package:expenses_tracker/constants/colors.dart';
-import 'package:expenses_tracker/utilities/dialogs/error_dialog.dart';
+import 'package:campuscash/auth/auth_exceptions.dart';
+import 'package:campuscash/auth/bloc/auth_bloc.dart';
+import 'package:campuscash/auth/bloc/auth_event.dart';
+import 'package:campuscash/auth/bloc/auth_state.dart';
+import 'package:campuscash/constants/colors.dart';
+import 'package:campuscash/utilities/dialogs/error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
-//// TODO pomyśleć nad powtórzeniem hasła, wyborem sposobu logowania, rozdzieleniem calosci na inne lub email itd itd
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -39,6 +37,7 @@ class _RegisterViewState extends State<RegisterView> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -50,21 +49,17 @@ class _RegisterViewState extends State<RegisterView> {
           if (state.exception is WrongPasswordAuthException) {
             await showErrorDialog(
               context,
-              // TODO l10n
-              'Podane dane są nieprawidłowe!',
+              'The password you entered is incorrect',
             );
-          }
-          if (state.exception is UserNotFoundAuthException) {
+          } else if (state.exception is UserNotFoundAuthException) {
             await showErrorDialog(
               context,
-              // TODO l10n
-              'blablabla',
+              'Something went wrong, please try again',
             );
           } else if (state.exception is GenericAuthException) {
             await showErrorDialog(
               context,
-              // TODO l10n
-              'Błąd autentykacji blabla',
+              'Authentication Error',
             );
           }
         }
@@ -72,27 +67,23 @@ class _RegisterViewState extends State<RegisterView> {
       child: GestureDetector(
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: Scaffold(
-          body: SingleChildScrollView(
-            child: Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(
-                    horizontal: 30.0, vertical: 35.0),
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
+            body: SingleChildScrollView(
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 35.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
                     Align(
-                      alignment: Alignment.topLeft,
+                    alignment: Alignment.topLeft,
                       child: Image.asset(
                         'assets/CampusCash.png',
                         height: 200.0,
                         width: 200.0,
                       ),
                     ),
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -108,22 +99,22 @@ class _RegisterViewState extends State<RegisterView> {
                       child: Text(
                         AppLocalizations.of(context)!.register_view_text,
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w400),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400),
                       ),
                     ),
-                    const SizedBox(
-                      height: 50.0,
-                    ),
+                    const SizedBox(height: 50.0),
                     TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      enableSuggestions: false,
-                      autocorrect: false,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        enableSuggestions: false,
+                        autocorrect: false,
+
                       //autofocus: true,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email),
                         hintText: AppLocalizations.of(context)!
-                            .regiser_view_email_hintText,
+                            .register_view_email_hintText,
                         filled: true,
                         fillColor: Colors.white,
                         enabledBorder: OutlineInputBorder(
@@ -225,7 +216,7 @@ class _RegisterViewState extends State<RegisterView> {
                         padding: EdgeInsets.only(top: 5.0),
                         child: Text(
                           // TODO l10n
-                          'Podane przez Ciebie hasła nie są takie same!',
+                          'The password you entered is not the same',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.red,
@@ -288,7 +279,6 @@ class _RegisterViewState extends State<RegisterView> {
                             text: AppLocalizations.of(context)!
                                 .register_view_have_account_part1,
                             style:
-                                // TODO edit color
                                 const TextStyle(
                                     color: Color.fromARGB(255, 75, 75, 75)),
                             children: [

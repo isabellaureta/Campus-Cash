@@ -1,12 +1,14 @@
-import 'package:expense_repository/expense_repository.dart';
-import 'package:expenses_tracker/screens/home/blocs/get_expenses_bloc/get_expenses_bloc.dart';
+import 'package:campuscash/screens/home/views/welcome_view.dart';
+import 'package:expense_repository/repositories.dart';
+import 'package:campuscash/screens/home/blocs/get_IncomeExpense_bloc/get_IncomeExpense_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'UserAccount/UserProfile.dart';
 import 'auth/bloc/auth_bloc.dart';
 import 'auth/firebase_auth_provider.dart';
 import 'main.dart';
 import 'screens/home/views/home_screen.dart';
-
+// Ensure you import your WelcomeView here
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -16,7 +18,6 @@ class MyAppView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
-
       providers: [
         BlocProvider<GetExpensesBloc>(
           create: (context) => GetExpensesBloc(
@@ -28,12 +29,17 @@ class MyAppView extends StatelessWidget {
             FirebaseExpenseRepo2(),
           )..add(GetIncomes()),
         ),
+        BlocProvider<AuthBloc>(
+          create: (context) => AuthBloc(
+            FirebaseAuthProvider(),
+          ),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        title: "Expense Tracker",
+        title: "Campus Cash",
         theme: ThemeData(
           colorScheme: ColorScheme.light(
             background: Colors.grey.shade100,
@@ -44,12 +50,12 @@ class MyAppView extends StatelessWidget {
             outline: Colors.grey,
           ),
         ),
-        home: BlocProvider(
-          create: (context) => AuthBloc(
-            FirebaseAuthProvider(),
-          ),
-          child: const HomePage(),
-        ),
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const HomePage(),
+          '/profile': (context) => ProfilePage(),
+          '/welcome': (context) => const WelcomeView(),
+        },
       ),
     );
   }

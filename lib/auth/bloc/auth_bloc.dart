@@ -1,12 +1,12 @@
 import 'package:bloc/bloc.dart';
-import 'package:expenses_tracker/auth/auth_provider.dart';
-import 'package:expenses_tracker/auth/bloc/auth_event.dart';
-import 'package:expenses_tracker/auth/bloc/auth_state.dart';
+import 'package:campuscash/auth/auth_provider.dart';
+import 'package:campuscash/auth/bloc/auth_event.dart';
+import 'package:campuscash/auth/bloc/auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(AuthProvider provider)
       : super(const AuthStateUninitialized(isLoading: true)) {
-    // initialize
+
     on<AuthEventInitialize>(
       (event, emit) async {
         await provider.initialize();
@@ -150,7 +150,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           const AuthStateLoggedOut(
             exception: null,
             isLoading: true,
-            loadingText: 'Proszę poczekać, aż Cię zaloguję',
+            loadingText: 'Please wait a moment',
           ),
         );
         final email = event.email;
