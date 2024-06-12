@@ -8,7 +8,6 @@ import 'auth/bloc/auth_bloc.dart';
 import 'auth/firebase_auth_provider.dart';
 import 'main.dart';
 import 'screens/home/views/home_screen.dart';
-// Ensure you import your WelcomeView here
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -60,43 +59,3 @@ class MyAppView extends StatelessWidget {
     );
   }
 }
-
-
-/*class MyAppView extends StatelessWidget {
-  const MyAppView({Key? key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: "Expense Tracker",
-      theme: ThemeData(
-        colorScheme: ColorScheme.light(
-          background: Colors.grey.shade100,
-          onBackground: Colors.black,
-          primary: const Color(0xFF00B2E7),
-          secondary: const Color(0xFFE064F7),
-          tertiary: const Color(0xFFFF8D6C),
-          outline: Colors.grey,
-        ),
-      ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => BlocProvider(
-          create: (context) => GetExpensesBloc(
-            FirebaseExpenseRepo(),
-          )..add(GetExpenses()),
-          child: HomeScreen(),
-        ),
-        '/incomes': (context) => BlocProvider(
-          create: (context) => GetIncomesBloc(
-            FirebaseExpenseRepo2(),
-          )..add(GetIncomes()),
-          child: HomeScreen(), // You might want to use a different screen for incomes
-        ),
-      },
-    );
-  }
-}
-
- */

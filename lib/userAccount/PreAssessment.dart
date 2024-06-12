@@ -167,7 +167,7 @@ class _UserDetailsViewState extends State<UserDetailsView> {
                         )
                             : const DecorationImage(
                           image: AssetImage(
-                            'assets/default_user_icon.png',
+                            'assets/CampusCash.png',
                           ),
                         ),
                       ),

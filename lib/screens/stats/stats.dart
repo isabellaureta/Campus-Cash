@@ -53,7 +53,9 @@ class _ChartScreenState extends State<ChartScreen> {
         }
       }
     }else if (selectedType == 'Expense Flow') {
-
+      // Handle Expense Flow here
+      // Example: You can just set an empty list for now
+      chartData = [];
     }
 
     setState(() {
@@ -70,7 +72,7 @@ class _ChartScreenState extends State<ChartScreen> {
     double totalAmount = getTotalAmount();
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chart Screen'),
+        title: Text('Transaction Statistics'),
       ),
       body: Center(
         child: Column(
@@ -94,43 +96,46 @@ class _ChartScreenState extends State<ChartScreen> {
                 }).toList(),
               ),
             ),
-            Expanded(
-              child: SfCircularChart(
-                legend: const Legend(
-                  isVisible: true,
-                  position: LegendPosition.right,
-                  overflowMode: LegendItemOverflowMode.wrap,
-                  iconHeight: 18,
-                  iconWidth: 18,
-                ),
-                series: <CircularSeries>[
-                  PieSeries<ChartData, String>(
-                    dataSource: chartData,
-                    xValueMapper: (ChartData data, _) => data.categoryName,
-                    yValueMapper: (ChartData data, _) => data.totalAmount,
-                    pointColorMapper: (ChartData data, _) => Color(data.color),
-                    dataLabelSettings: const DataLabelSettings(
-                      isVisible: true,
-                      labelPosition: ChartDataLabelPosition.inside,
-                      connectorLineSettings: ConnectorLineSettings(
-                        type: ConnectorType.line,
-                      ),
-                      textStyle: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(2.0, 2.0),
-                            blurRadius: 3.0,
-                            color: Color.fromARGB(255, 0, 0, 0), // Shadow color
-                          ),
-                        ]
-                      ),
-                    ),
-                    enableTooltip: true,
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Expanded(
+                child: SfCircularChart(
+                  legend: const Legend(
+                    isVisible: true,
+                    position: LegendPosition.right,
+                    overflowMode: LegendItemOverflowMode.wrap,
+                    iconHeight: 18,
+                    iconWidth: 18,
                   ),
-                ],
+                  series: <CircularSeries>[
+                    PieSeries<ChartData, String>(
+                      dataSource: chartData,
+                      xValueMapper: (ChartData data, _) => data.categoryName,
+                      yValueMapper: (ChartData data, _) => data.totalAmount,
+                      pointColorMapper: (ChartData data, _) => Color(data.color),
+                      dataLabelSettings: const DataLabelSettings(
+                        isVisible: true,
+                        labelPosition: ChartDataLabelPosition.inside,
+                        connectorLineSettings: ConnectorLineSettings(
+                          type: ConnectorType.line,
+                        ),
+                        textStyle: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(2.0, 2.0),
+                              blurRadius: 3.0,
+                              color: Color.fromARGB(255, 0, 0, 0), // Shadow color
+                            ),
+                          ]
+                        ),
+                      ),
+                      enableTooltip: true,
+                    ),
+                  ],
+                ),
               ),
             ),
             ...chartData.map((data) => Padding(
@@ -142,23 +147,26 @@ class _ChartScreenState extends State<ChartScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Color(data.color),
-                          shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Color(data.color),
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      Image.asset(
-                        'assets/${data.icon}.png',
-                        scale: 2,
-                        color: Colors.white,
-                      ),
-                    ],
+                        Image.asset(
+                          'assets/${data.icon}.png',
+                          scale: 2,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
                   ),
 
                   SizedBox(width: 18),
@@ -180,7 +188,7 @@ class _ChartScreenState extends State<ChartScreen> {
                             Text(
                               textAlign: TextAlign.left,
                               '    ${data.totalAmount}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -188,7 +196,7 @@ class _ChartScreenState extends State<ChartScreen> {
                             Text(
                               textAlign: TextAlign.right,
                               '${((data.totalAmount / totalAmount) * 100).toStringAsFixed(2)}%',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -217,13 +225,13 @@ class _ChartScreenState extends State<ChartScreen> {
                           ],
                         ),
                         SizedBox(height: 9),
-
                       ],
                     ),
                   ),
                 ],
               ),
-            )).toList(),
+            )
+            ).toList(),
           ],
         ),
       ),

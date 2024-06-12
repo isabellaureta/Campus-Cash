@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:campuscash/screens/home/views/preassessment_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -19,6 +18,25 @@ class MainScreen extends StatefulWidget {
   @override
   _MainScreenState createState() => _MainScreenState();
 }
+
+class Transaction {
+  final String name;
+  final double amount;
+  final DateTime date;
+  final bool isIncome; // True for income, false for expense
+  final int color;
+  final String icon;
+
+  Transaction({
+    required this.name,
+    required this.amount,
+    required this.date,
+    required this.isIncome,
+    required this.color,
+    required this.icon,
+  });
+}
+
 
 class _MainScreenState extends State<MainScreen> {
   final TextEditingController _totalBalanceController = TextEditingController();
@@ -59,6 +77,40 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  List<Transaction> _getAllTransactions() {
+    List<Transaction> transactions = [];
+
+    for (var expense in widget.expenses) {
+      transactions.add(
+        Transaction(
+          name: expense.category.name,
+          amount: expense.amount.toDouble(),
+          date: expense.date,
+          isIncome: false,
+          color: expense.category.color.toInt(),
+          icon: expense.category.icon,
+        ),
+      );
+    }
+
+    for (var income in widget.incomes) {
+      transactions.add(
+        Transaction(
+          name: income.category2.name,
+          amount: income.amount.toDouble(),
+          date: income.date,
+          isIncome: true,
+          color: income.category2.color.toInt(),
+          icon: income.category2.icon,
+        ),
+      );
+    }
+
+    transactions.sort((a, b) => b.date.compareTo(a.date));
+
+    return transactions;
+  }
+
   void _saveDataToFirestore() {
     _balanceRef.update({
       'total_balance': double.parse(_totalBalanceController.text),
@@ -71,6 +123,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    List<Transaction> transactions = _getAllTransactions();
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
@@ -323,10 +376,11 @@ class _MainScreenState extends State<MainScreen> {
                 )
               ],
             ),
+
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: widget.expenses.length, // Access expenses from widget property
+                itemCount: transactions.length,
                 itemBuilder: (context, int i) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
@@ -340,143 +394,69 @@ class _MainScreenState extends State<MainScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Color(widget.expenses[i].category.color),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    Image.asset(
-                                      'assets/${widget.expenses[i].category.icon}.png',
-                                      scale: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  widget.expenses[i].category.name,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onBackground,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                        Row(
+                        children: [
+                        Stack(
+                        alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Color(transactions[i].color),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "\₱${widget.expenses[i].amount}.00",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.redAccent,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat('dd/MM/yyyy').format(widget.expenses[i].date),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.outline,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: const Icon(CupertinoIcons.delete),
-                              onPressed: () => _showDeleteExpenseConfirmationDialog(context, widget.expenses[i]),
+                            Image.asset(
+                              'assets/${transactions[i].icon}.png',
+                              scale: 2,
+                              color: Colors.white,
                             ),
                           ],
                         ),
+                        const SizedBox(width: 12),
+                        Text(
+                          transactions[i].name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onBackground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        ],
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.incomes.length, // Access incomes from widget property
-                itemBuilder: (context, int i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            "\₱${transactions[i].amount}0",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: transactions[i].isIncome ? Colors.green : Colors.redAccent,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd/MM/yyyy').format(transactions[i].date),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.outline,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: Color(widget.incomes[i].category2.color),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    Image.asset(
-                                      'assets/${widget.incomes[i].category2.icon}.png',
-                                      scale: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  widget.incomes[i].category2.name,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onBackground,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "\₱${widget.incomes[i].amount}.00",
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat('dd/MM/yyyy').format(widget.incomes[i].date),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.outline,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: const Icon(CupertinoIcons.delete),
-                              onPressed: () => _showDeleteIncomeConfirmationDialog(context, widget.incomes[i]),
-                            ),
-                          ],
+                      IconButton(
+                        icon: const Icon(CupertinoIcons.delete),
+                        onPressed: () {
+                          if (transactions[i].isIncome) {
+                            _showDeleteIncomeConfirmationDialog(context, widget.incomes.firstWhere((income) => income.date == transactions[i].date && income.amount == transactions[i].amount));
+                          } else {
+                            _showDeleteExpenseConfirmationDialog(context, widget.expenses.firstWhere((expense) => expense.date == transactions[i].date && expense.amount == transactions[i].amount));
+                          }
+                        },
+                      )
+                      ],
                         ),
                       ),
                     ),
@@ -504,7 +484,6 @@ class _MainScreenState extends State<MainScreen> {
         .then((_) {
       setState(() {
         widget.expenses.remove(expense);
-        _updateRemainingBudget(expense.amount as double); // Update the remaining budget
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Expense transaction deleted')),
