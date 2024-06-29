@@ -59,7 +59,7 @@ class _LoginViewState extends State<LoginView> {
               'Something went wrong, please try again',
             );
           }
-          
+
         }
       },
       child: GestureDetector(
@@ -177,8 +177,8 @@ class _LoginViewState extends State<LoginView> {
                       child: TextButton(
                         onPressed: () {
                           context.read<AuthBloc>().add(
-                                const AuthEventForgotPassword(),
-                              );
+                            const AuthEventForgotPassword(),
+                          );
                         },
                         child: Text(AppLocalizations.of(context)!
                             .login_view_forgot_password),
@@ -194,11 +194,11 @@ class _LoginViewState extends State<LoginView> {
                           final email = _email.text;
                           final password = _password.text;
                           context.read<AuthBloc>().add(
-                                AuthEventLogIn(
-                                  email,
-                                  password,
-                                ),
-                              );
+                            AuthEventLogIn(
+                              email,
+                              password,
+                            ),
+                          );
                         },
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
@@ -220,16 +220,16 @@ class _LoginViewState extends State<LoginView> {
                     TextButton(
                       onPressed: () {
                         context.read<AuthBloc>().add(
-                              const AuthEventShouldRegister(),
-                            );
+                          const AuthEventShouldRegister(),
+                        );
                       },
                       child: Text.rich(
                         TextSpan(
                             text: AppLocalizations.of(context)!
                                 .login_view_new_account_part1,
                             style:
-                                const TextStyle(
-                                    color: Color.fromARGB(255, 75, 75, 75)),
+                            const TextStyle(
+                                color: Color.fromARGB(255, 75, 75, 75)),
                             children: [
                               TextSpan(
                                   text: AppLocalizations.of(context)!

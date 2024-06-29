@@ -16,7 +16,7 @@ import '../../addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dar
 import '../../budget_allocation/addBudget.dart';
 import '../../budget_allocation/addBudgetandAllocation.dart';
 import '../../goal/addGoals.dart';
-import '../../goal_savings/addGoalandLoan.dart';
+import '../../goal_loan/addGoalandLoan.dart';
 import '../../stats/stats.dart';
 
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';

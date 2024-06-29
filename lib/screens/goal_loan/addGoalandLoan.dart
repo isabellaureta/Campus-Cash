@@ -1,8 +1,6 @@
-import 'package:campuscash/screens/goal_savings/addLoan.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'addGoals.dart';
-import 'addLoan2.dart';
 
 class CustomTabBarsPage extends StatefulWidget {
   const CustomTabBarsPage({super.key});
@@ -38,13 +36,6 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
     );
   }
 
-  void _navigateToAddLoanPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => MeToThemPage()),
-    );
-  }
-
   Future<void> _deleteGoal(DocumentSnapshot document) async {
     try {
       await FirebaseFirestore.instance
@@ -58,48 +49,6 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
     }
   }
 
-  void _navigateToMeToThem() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => MeToThemPage()),
-    );
-  }
-
-  void _navigateToThemToMe() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ThemToMePage()),
-    );
-  }
-
-  Widget _buildLoanSummary(int utangSayo, int utangMo) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
-                children: [
-                  Text('PHP $utangSayo',
-                      style: TextStyle(color: Colors.red, fontSize: 20)),
-                  Text('Receivable'),
-                ],
-              ),
-              Column(
-                children: [
-                  Text('PHP $utangMo',
-                      style: TextStyle(color: Colors.green, fontSize: 20)),
-                  Text('Payable'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildLoanCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
@@ -270,72 +219,7 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
               ),
             ],
           ),
-          Column(
-            children: [
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('loans').snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  final loans = snapshot.data!.docs;
-                  int utangSayo = 0;
-                  int utangMo = 0;
-                  loans.forEach((loan) {
-                    Map<String, dynamic> data = loan.data() as Map<String, dynamic>;
-                    if (data['type'] == 'utangSayo') {
-                      utangSayo += (data['amount'] as num).toInt();
-                    } else {
-                      utangMo += (data['amount'] as num).toInt();
-                    }
-                  });
 
-                  return _buildLoanSummary(utangSayo, utangMo);
-                  },
-              ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('loans').snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                    final loans = snapshot.data!.docs;
-                    return ListView.builder(
-                      itemCount: loans.length,
-                      itemBuilder: (context, index) {
-                        return _buildLoanCard(loans[index]);
-                        },
-                    );
-                    },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToThemToMe,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    textStyle: TextStyle(fontSize: 18),
-                    minimumSize: Size(double.infinity, 50),
-                  ),
-                  child: Text('Lend'),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToMeToThem,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    textStyle: TextStyle(fontSize: 18),
-                    minimumSize: Size(double.infinity, 50),
-                  ),
-                  child: Text('Borrow'),
-                ),
-              )
-            ],
-          ),
         ]
       )
     );

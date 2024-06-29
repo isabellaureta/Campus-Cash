@@ -2,9 +2,19 @@ import 'package:campuscash/auth/auth_exceptions.dart';
 import 'package:campuscash/auth/auth_provider.dart';
 import 'package:campuscash/auth/auth_user.dart';
 import 'package:campuscash/firebase_options.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'
-    show FirebaseAuth, FirebaseAuthException;
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth, FirebaseAuthException;
+
+Future<void> createUserDocument(String userId) async {
+  final userDocument = FirebaseFirestore.instance.collection('userDetails').doc(userId);
+  await userDocument.set({
+    'firstTime': true,
+    'name': '',
+    'url': '',
+    'user_id': userId,
+  });
+}
 
 class FirebaseAuthProvider implements AuthProvider {
   @override
@@ -19,6 +29,7 @@ class FirebaseAuthProvider implements AuthProvider {
       );
       final user = currentUser;
       if (user != null) {
+        await createUserDocument(user.uid); // Create a user document
         return user;
       } else {
         throw UserNotLoggedInAuthException();

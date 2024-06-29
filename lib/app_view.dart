@@ -8,6 +8,7 @@ import 'auth/bloc/auth_bloc.dart';
 import 'auth/firebase_auth_provider.dart';
 import 'main.dart';
 import 'screens/home/views/home_screen.dart';
+import 'screens/addIncomeExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -32,6 +33,11 @@ class MyAppView extends StatelessWidget {
           create: (context) => AuthBloc(
             FirebaseAuthProvider(),
           ),
+        ),
+        BlocProvider<GetCategoriesBloc>(
+          create: (context) => GetCategoriesBloc(
+            FirebaseExpenseRepo(),
+          )..add(GetCategories()),
         ),
       ],
       child: MaterialApp(

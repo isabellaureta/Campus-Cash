@@ -1,8 +1,13 @@
+import 'package:campuscash/screens/budget_allocation/pay_yourself_first_page.dart';
+import 'package:campuscash/screens/budget_allocation/priority_based_budgeting_page.dart';
+import 'package:campuscash/screens/budget_allocation/safe_to_spend_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '503020_budgeting_page.dart';
 import 'addBudget.dart';
+import 'envelope_budgeting_page.dart';
 
 class AddBudget extends StatefulWidget {
   @override
@@ -108,6 +113,94 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     );
   }
 
+  Widget _buildBudgetAllocation() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select a Budgeting Technique:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
+          _buildBudgetTechniqueButton(
+            '50/30/20 Budgeting',
+            'Allocate 50% to needs, 30% to wants, and 20% to savings.',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Budget503020Page()),
+              );
+            },
+          ),
+          _buildBudgetTechniqueButton(
+            'Envelope Budgeting',
+            'Allocate money into different envelopes for various expenses.',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => EnvelopeBudgetingPage()),
+              );
+            },
+          ),
+          _buildBudgetTechniqueButton(
+            'Pay-Yourself-First',
+            'Prioritize savings and investments before other expenses.',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PayYourselfFirstPage()),
+              );
+            },
+          ),
+          _buildBudgetTechniqueButton(
+            'Priority-Based Budgeting',
+            'Allocate funds based on priority expenses.',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage()),
+              );
+            },
+          ),
+          _buildBudgetTechniqueButton(
+            'Safe-to-Spend Budgeting',
+            'Set aside essentials and goals, spend the rest freely.',
+                () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SafeToSpendPage()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBudgetTechniqueButton(String title, String description, VoidCallback onPressed) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          textStyle: TextStyle(fontSize: 18),
+          minimumSize: Size(double.infinity, 60),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 4),
+            Text(description, style: TextStyle(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,9 +249,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               ),
             ],
           ),
-          Center(
-              child: Text('Add Budget allocation')
-          ),
+          _buildBudgetAllocation(),
         ],
       ),
     );

@@ -13,8 +13,10 @@
     "login_view_password_hintText": "Password",
     "login_view_forgot_password": "Forgot password?",
     "login_view_login_button": "Log in",
+    "login_view_not_registered": "Account not found!",
     "login_view_new_account_part1": "Don't have an account? ",
     "login_view_new_account_part2": "Create one!",
+
 
     "register_view_join_now": "Join now!",
     "register_view_text": "Take control of your expenses like never before",

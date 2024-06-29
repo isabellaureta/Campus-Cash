@@ -19,6 +19,8 @@ class AuthEventLogIn extends AuthEvent {
   );
 }
 
+class AuthEventLogInWithGoogle extends AuthEvent {}
+
 class AuthEventShouldLogIn extends AuthEvent {
   const AuthEventShouldLogIn();
 }

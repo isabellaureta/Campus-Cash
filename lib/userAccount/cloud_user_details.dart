@@ -11,7 +11,7 @@ class CloudUserDetails {
   final String url;
   final bool isFirstTime;
 
-  const CloudUserDetails({
+  CloudUserDetails({
     required this.documentId,
     required this.ownerUserId,
     required this.name,
@@ -19,10 +19,14 @@ class CloudUserDetails {
     required this.isFirstTime,
   });
 
-  CloudUserDetails.fromSnapshot(DocumentSnapshot<Map<String, dynamic>> snapshot)
-      : documentId = snapshot.id,
-        ownerUserId = snapshot.data()![ownerUserIdFieldName],
-        name = snapshot.data()![nameFieldName] as String,
-        url = snapshot.data()![urlFieldName] as String,
-        isFirstTime = snapshot.data()![isFirstTimeFieldName];
+  factory CloudUserDetails.fromSnapshot(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+    final data = snapshot.data()!;
+    return CloudUserDetails(
+      documentId: snapshot.id,
+      ownerUserId: data['user_id'],
+      name: data['name'],
+      url: data['url'],
+      isFirstTime: data['isFirstTime'],
+    );
+  }
 }

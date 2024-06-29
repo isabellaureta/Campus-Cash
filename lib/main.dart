@@ -68,7 +68,7 @@ class HomePage extends StatelessWidget {
       builder: (context, state) {
         if (state is AuthStateLoggedIn) {
           return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-            future: _getUserDetails(state.user.id),
+            future: _getUserDetails(state.user.uid),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -115,15 +115,12 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>?> _getUserDetails(
-      String userId) async {
-    final userDetailsCollection =
-    FirebaseFirestore.instance.collection('userDetails');
-    final QuerySnapshot<Map<String, dynamic>> snapshot =
-    await userDetailsCollection.where('user_id', isEqualTo: userId).get();
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _getUserDetails(String userId) async {
+    final DocumentSnapshot<Map<String, dynamic>> doc =
+    await FirebaseFirestore.instance.collection('userDetails').doc(userId).get();
 
-    if (snapshot.docs.isNotEmpty) {
-      return snapshot.docs.first;
+    if (doc.exists) {
+      return doc;
     } else {
       return null;
     }

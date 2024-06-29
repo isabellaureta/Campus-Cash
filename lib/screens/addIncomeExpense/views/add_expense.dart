@@ -1,7 +1,4 @@
 import 'package:expense_repository/repositories.dart';
-import 'package:campuscash/screens/addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
-import 'package:campuscash/screens/addIncomeExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
-import 'package:campuscash/screens/addIncomeExpense/views/category_creation2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +6,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import '../blocs/create_expense_bloc/create_expense_bloc.dart';
+import '../blocs/get_categories_bloc/get_categories_bloc.dart';
+import '../views/category_creation2.dart';
 import 'category_creation.dart';
 
 class AddExpense extends StatefulWidget {
@@ -22,9 +22,11 @@ class _AddExpenseState extends State<AddExpense> {
   TextEditingController expenseController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
   TextEditingController dateController = TextEditingController();
-  // DateTime selectDate = DateTime.now();
   late Expense expense;
   bool isLoading = false;
+
+  List<String> myCategoriesIcons = ['entertainment', 'food', 'home', 'pet', 'shopping', 'tech', 'travel', 'restaurant_icon'];
+
 
   @override
   void initState() {
@@ -34,17 +36,13 @@ class _AddExpenseState extends State<AddExpense> {
     super.initState();
   }
 
-
-
-
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<CreateExpenseBloc, CreateExpenseState>(
       listener: (context, state) {
-        if(state is CreateExpenseSuccess) {
+        if (state is CreateExpenseSuccess) {
           Navigator.pop(context, expense);
-        } else if(state is CreateExpenseLoading) {
+        } else if (state is CreateExpenseLoading) {
           setState(() {
             isLoading = true;
           });
@@ -61,177 +59,217 @@ class _AddExpenseState extends State<AddExpense> {
             builder: (context, state) {
               if (state is GetCategoriesSuccess) {
                 return Padding(
-                    padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-              const Text(
-              "Add Expense",
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(
-                        height: 16,
-                      ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.7,
-                  child: TextFormField(
-                    controller: expenseController,
-                    textAlignVertical: TextAlignVertical.center,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(
-                        FontAwesomeIcons.pesoSign,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-
-                      const SizedBox(
-                        height: 32,
-                      ),
-                      TextFormField(
-                        controller: categoryController,
-                        textAlignVertical: TextAlignVertical.center,
-                        readOnly: true,
-                        onTap: () {},
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: expense.category == Category.empty ? Colors.white : Color(expense.category.color),
-                          prefixIcon: expense.category == Category.empty
-                              ? const Icon(
-                            FontAwesomeIcons.list,
-                            size: 16,
-                            color: Colors.grey,
-                          )
-                              : Image.asset(
-                            'assets/${expense.category.icon}.png',
-                            scale: 2,
-                          ),
-                          suffixIcon: IconButton(
-                              onPressed: () async {
-                                var newCategory = await getCategoryCreation(context);
-                                setState(() {
-                                  state.categories.insert(0, newCategory);
-                                });
-                              },
-                              icon: const Icon(
-                                FontAwesomeIcons.plus,
+                  padding: const EdgeInsets.all(16.0),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Add Expense",
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(
+                          height: 16,
+                        ),
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.7,
+                          child: TextFormField(
+                            controller: expenseController,
+                            textAlignVertical: TextAlignVertical.center,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              prefixIcon: const Icon(
+                                FontAwesomeIcons.pesoSign,
                                 size: 16,
                                 color: Colors.grey,
-                              )
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
                           ),
-                          hintText: 'Category',
-                          border: const OutlineInputBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12)), borderSide: BorderSide.none),
                         ),
-                      ),
-                      Container(
-                        height: 200,
-                        width: MediaQuery.of(context).size.width,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                        const SizedBox(
+                          height: 32,
                         ),
-                        child: Padding(
+                        TextFormField(
+                          controller: categoryController,
+                          textAlignVertical: TextAlignVertical.center,
+                          readOnly: true,
+                          onTap: () {},
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: expense.category == Category.empty
+                                ? Colors.white
+                                : Color(expense.category.color),
+                            prefixIcon: expense.category == Category.empty
+                                ? const Icon(
+                              FontAwesomeIcons.list,
+                              size: 16,
+                              color: Colors.grey,
+                            )
+                                : Image.asset(
+                              'assets/${expense.category.icon}.png',
+                              scale: 2,
+                            ),
+                            suffixIcon: IconButton(
+                                onPressed: () async {
+                                  var newCategory = await getCategoryCreation(context);
+                                  setState(() {
+                                    state.categories.insert(0, newCategory);
+                                  });
+                                },
+                                icon: const Icon(
+                                  FontAwesomeIcons.plus,
+                                  size: 16,
+                                  color: Colors.grey,
+                                )),
+                            hintText: 'Category',
+                            border: const OutlineInputBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                                borderSide: BorderSide.none),
+                          ),
+                        ),
+                        Container(
+                          height: 200,
+                          width: MediaQuery.of(context).size.width,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.vertical(
+                                bottom: Radius.circular(12)),
+                          ),
+                          child: Padding(
                             padding: const EdgeInsets.all(8.0),
-                            child: ListView.builder(
-                                itemCount: state.categories.length,
-                                itemBuilder: (context, int i) {
-                                  return Card(
-                                    child: ListTile(
-                                      onTap: () {
-                                        setState(() {
-                                          expense.category = state.categories[i];
-                                          categoryController.text = expense.category.name;
-                                        });
-                                      },
-                                      leading: Image.asset(
-                                        'assets/${state.categories[i].icon}.png',
-                                        scale: 2,
-                                      ),
-                                      title: Text(state.categories[i].name),
-                                      tileColor: Color(state.categories[i].color),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        onPressed: () {
-                                          // Dispatch delete category event
-                                          context.read<GetCategoriesBloc>().add(DeleteCategory(state.categories[i]));
-                                        },
-                                      ),
+                            child: GridView.builder(
+                              gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4, // Number of columns
+                                mainAxisSpacing: 10.0,
+                                crossAxisSpacing: 10.0,
+                                childAspectRatio: 0.7, // Adjust the item height
+                              ),
+                              itemCount: state.categories.length,
+                              itemBuilder: (context, int i) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      expense.category = state.categories[i];
+                                      categoryController.text =
+                                          expense.category.name;
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Color(state.categories[i].color),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                  );
-                                }
-                            )
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 16,
-                      ),
-                      TextFormField(
-                        controller: dateController,
-                        textAlignVertical: TextAlignVertical.center,
-                        readOnly: true,
-                        onTap: () async {
-                          DateTime? newDate = await showDatePicker(context: context, initialDate: expense.date, firstDate: DateTime(1900), lastDate: DateTime.now().add(const Duration(days: 365)));
+                                    child: Column(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          child: Expanded(
+                                            child: Image.asset(
+                                              'assets/${state.categories[i].icon}.png',
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ),
 
-                          if (newDate != null) {
-                            setState(() {
-                              dateController.text = DateFormat('dd/MM/yyyy').format(newDate);
-                              // selectDate = newDate;
-                              expense.date = newDate;
-                            });
-                          }
-                        },
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          prefixIcon: const Icon(
-                            FontAwesomeIcons.clock,
-                            size: 16,
-                            color: Colors.grey,
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          state.categories[i].name,
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                          hintText: 'Date',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                         ),
-                      ),
-                      const SizedBox(
-                        height: 32,
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        height: kToolbarHeight,
-                        child: isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : TextButton(
-                            onPressed: () {
+                        const SizedBox(
+                          height: 16,
+                        ),
+                        TextFormField(
+                          controller: dateController,
+                          textAlignVertical: TextAlignVertical.center,
+                          readOnly: true,
+                          onTap: () async {
+                            DateTime? newDate = await showDatePicker(
+                                context: context,
+                                initialDate: expense.date,
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now()
+                                    .add(const Duration(days: 365)));
+
+                            if (newDate != null) {
                               setState(() {
-                                expense.amount = int.parse(expenseController.text);
+                                dateController.text =
+                                    DateFormat('dd/MM/yyyy').format(newDate);
+                                expense.date = newDate;
                               });
-
-                              context.read<CreateExpenseBloc>().add(CreateExpense(expense));
-                            },
-                            style: TextButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                            child: const Text(
-                              'Save',
-                              style: TextStyle(fontSize: 22, color: Colors.white),
-                            )
+                            }
+                          },
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            prefixIcon: const Icon(
+                              FontAwesomeIcons.clock,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                            hintText: 'Date',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none),
+                          ),
                         ),
-                      ),
+                        const SizedBox(
+                          height: 32,
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: kToolbarHeight,
+                          child: isLoading
+                              ? const Center(
+                              child: CircularProgressIndicator())
+                              : TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  expense.amount = int.parse(
+                                      expenseController.text);
+                                });
 
-
-                    ],
+                                context
+                                    .read<CreateExpenseBloc>()
+                                    .add(CreateExpense(expense));
+                              },
+                              style: TextButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(12))),
+                              child: const Text(
+                                'Save',
+                                style: TextStyle(
+                                    fontSize: 22, color: Colors.white),
+                              )),
+                        ),
+                      ],
+                    ),
                   ),
-              ),
                 );
               } else {
                 return const Center(

@@ -7,7 +7,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:uuid/uuid.dart';
 
 Future getCategoryCreation(BuildContext context) {
-  List<String> myCategoriesIcons = ['entertainment', 'food', 'home', 'pet', 'shopping', 'tech', 'travel'];
+  List<String> myCategoriesIcons = ['entertainment', 'food', 'home', 'pet', 'shopping', 'tech', 'travel', 'restaurant_icon', 'clothes_icon'];
 
   return showDialog(
       context: context,
@@ -92,6 +92,7 @@ Future getCategoryCreation(BuildContext context) {
                                     onTap: () {
                                       setState(() {
                                         iconSelected = myCategoriesIcons[i];
+                                        categoryIconController.text = myCategoriesIcons[i];
                                       });
                                     },
                                     child: Container(
@@ -100,8 +101,7 @@ Future getCategoryCreation(BuildContext context) {
                                       decoration: BoxDecoration(
                                           border: Border.all(width: 3, color: iconSelected == myCategoriesIcons[i] ? Colors.green : Colors.grey),
                                           borderRadius: BorderRadius.circular(12),
-                                          image: DecorationImage(image: AssetImage('assets/${myCategoriesIcons[i]}.png')
-                                          )
+                                          image: DecorationImage(image: AssetImage('assets/${myCategoriesIcons[i]}.png'), fit: BoxFit.cover)
                                       ),
                                     ),
                                   );

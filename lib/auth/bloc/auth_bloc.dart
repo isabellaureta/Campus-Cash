@@ -8,9 +8,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       : super(const AuthStateUninitialized(isLoading: true)) {
 
     on<AuthEventInitialize>(
-      (event, emit) async {
+          (event, emit) async {
         await provider.initialize();
         final user = provider.currentUser;
+
 
         // user is null so the state is 'logged out'
         if (user == null) {
@@ -40,7 +41,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // forgot password
     on<AuthEventForgotPassword>(
-      (event, emit) async {
+          (event, emit) async {
         emit(
           const AuthStateForgotPassword(
             exception: null,
@@ -88,7 +89,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // send email verification
     on<AuthEventSendEmailVerification>(
-      (event, emit) async {
+          (event, emit) async {
         await provider.sendEmailVerification();
         emit(state);
       },
@@ -96,7 +97,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // register
     on<AuthEventRegister>(
-      (event, emit) async {
+          (event, emit) async {
         final email = event.email;
         final password = event.password;
         try {
@@ -122,7 +123,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
 
     on<AuthEventShouldRegister>(
-      (event, emit) {
+          (event, emit) {
         emit(
           const AuthStateRegistering(
             exception: null,
@@ -134,7 +135,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // log in
     on<AuthEventShouldLogIn>(
-      (event, emit) {
+          (event, emit) {
         emit(
           const AuthStateLoggingIn(
             exception: null,
@@ -145,7 +146,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
 
     on<AuthEventLogIn>(
-      (event, emit) async {
+          (event, emit) async {
         emit(
           const AuthStateLoggedOut(
             exception: null,
@@ -199,7 +200,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // log out
     on<AuthEventLogOut>(
-      (event, emit) async {
+          (event, emit) async {
         try {
           await provider.logOut();
           emit(

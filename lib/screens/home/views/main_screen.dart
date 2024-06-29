@@ -40,7 +40,7 @@ class Transaction {
 
 class _MainScreenState extends State<MainScreen> {
   final TextEditingController _totalBalanceController = TextEditingController();
-  final DatabaseReference _balanceRef = FirebaseDatabase.instance.reference().child('balances');
+  final DatabaseReference _balanceRef = FirebaseDatabase.instance.ref().child('balances');
   final FirebaseAuth _auth = FirebaseAuth.instance;
   double _totalBudget = 0;
   double _remainingBudget = 0;
@@ -394,69 +394,69 @@ class _MainScreenState extends State<MainScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                        Row(
-                        children: [
-                        Stack(
-                        alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Color(transactions[i].color),
-                                shape: BoxShape.circle,
-                              ),
+                            Row(
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Color(transactions[i].color),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    Image.asset(
+                                      'assets/${transactions[i].icon}.png',
+                                      scale: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  transactions[i].name,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.onBackground,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Image.asset(
-                              'assets/${transactions[i].icon}.png',
-                              scale: 2,
-                              color: Colors.white,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  "\₱${transactions[i].amount}0",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: transactions[i].isIncome ? Colors.green : Colors.redAccent,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat('dd/MM/yyyy').format(transactions[i].date),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.outline,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
                             ),
+                            IconButton(
+                              icon: const Icon(CupertinoIcons.delete),
+                              onPressed: () {
+                                if (transactions[i].isIncome) {
+                                  _showDeleteIncomeConfirmationDialog(context, widget.incomes.firstWhere((income) => income.date == transactions[i].date && income.amount == transactions[i].amount));
+                                } else {
+                                  _showDeleteExpenseConfirmationDialog(context, widget.expenses.firstWhere((expense) => expense.date == transactions[i].date && expense.amount == transactions[i].amount));
+                                }
+                              },
+                            )
                           ],
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          transactions[i].name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onBackground,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            "\₱${transactions[i].amount}0",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: transactions[i].isIncome ? Colors.green : Colors.redAccent,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          Text(
-                            DateFormat('dd/MM/yyyy').format(transactions[i].date),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.outline,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.delete),
-                        onPressed: () {
-                          if (transactions[i].isIncome) {
-                            _showDeleteIncomeConfirmationDialog(context, widget.incomes.firstWhere((income) => income.date == transactions[i].date && income.amount == transactions[i].amount));
-                          } else {
-                            _showDeleteExpenseConfirmationDialog(context, widget.expenses.firstWhere((expense) => expense.date == transactions[i].date && expense.amount == transactions[i].amount));
-                          }
-                        },
-                      )
-                      ],
                         ),
                       ),
                     ),
