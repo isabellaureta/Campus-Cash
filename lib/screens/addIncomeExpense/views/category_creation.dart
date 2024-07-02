@@ -7,7 +7,16 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:uuid/uuid.dart';
 
 Future getCategoryCreation(BuildContext context) {
-  List<String> myCategoriesIcons = ['entertainment', 'food', 'home', 'pet', 'shopping', 'tech', 'travel', 'restaurant_icon', 'clothes_icon'];
+  List<String> myCategoriesIcons = [
+    'Education',
+    'Tuition Fees',
+    'School Supplies',
+    'Subscriptions',
+    'shopping',
+    'tech',
+    'travel',
+    'Groceries'
+  ];
 
   return showDialog(
       context: context,
