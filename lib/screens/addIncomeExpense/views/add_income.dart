@@ -22,9 +22,29 @@ class _AddIncomeState extends State<AddIncome> {
   TextEditingController incomeController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
   TextEditingController dateController = TextEditingController();
-  // DateTime selectDate = DateTime.now();
   late Income income;
   bool isLoading = false;
+
+  final List<Category2> predefinedCategories = [
+  Category2(icon: 'Allowance', name: 'Allowance', color: 0xFFE57373, categoryId2: '011'),
+  Category2(icon: 'Scholarship', name: 'Scholarship', color: 0xFF81C784, categoryId2: '022'),
+  Category2(icon: 'Grants', name: 'Grants', color: 0xFF64B5F6, categoryId2: '033'),
+  Category2(icon: 'Part-Time Job', name: 'Part-Time Job', color: 0xFFFFD54F, categoryId2: '044'),
+  Category2(icon: 'Freelance', name: 'Freelance', color: 0xFFBA68C8, categoryId2: '055'),
+  Category2(icon: 'Stipends', name: 'Stipends', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Salary', name: 'Salary', color: 0xFFAED581, categoryId2: '077'),
+  Category2(icon: 'Internships', name: 'Internships', color: 0xFF7986CB, categoryId2: '088'),
+  Category2(icon: 'Loans', name: 'Loans', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Savings', name: 'Savings', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Gifts', name: 'Gifts', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Awards', name: 'Awards', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Investments', name: 'Investments', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Business', name: 'Business', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Refunds', name: 'Refunds', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Crypto', name: 'Crypto', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Pre-owned Sales', name: 'Pre-owned Sales', color: 0xFF4DB6AC, categoryId2: '066'),
+  Category2(icon: 'Others', name: 'Others', color: 0xFF4DB6AC, categoryId2: '066'),
+];
 
   @override
   void initState() {
@@ -99,6 +119,7 @@ class _AddIncomeState extends State<AddIncome> {
                         const SizedBox(
                           height: 32,
                         ),
+
                         TextFormField(
                           controller: categoryController,
                           textAlignVertical: TextAlignVertical.center,
@@ -106,7 +127,9 @@ class _AddIncomeState extends State<AddIncome> {
                           onTap: () {},
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: income.category2 == Category2.empty ? Colors.white : Color(income.category2.color),
+                            fillColor: income.category2 == Category2.empty
+                                ? Colors.white
+                                : Color(income.category2.color),
                             prefixIcon: income.category2 == Category2.empty
                                 ? const Icon(
                               FontAwesomeIcons.list,
@@ -119,59 +142,81 @@ class _AddIncomeState extends State<AddIncome> {
                             ),
                             suffixIcon: IconButton(
                                 onPressed: () async {
-                                  var newCategory2 = await getCategoryCreation2(context);
+                                  var newCategory = await getCategoryCreation(context);
                                   setState(() {
-                                    state.categories2.insert(0, newCategory2);
+                                    predefinedCategories.insert(0, newCategory);
                                   });
                                 },
                                 icon: const Icon(
                                   FontAwesomeIcons.plus,
                                   size: 16,
                                   color: Colors.grey,
-                                )
-                            ),
+                                )),
                             hintText: 'Category',
-                            border: const OutlineInputBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12)), borderSide: BorderSide.none),
+                            border: const OutlineInputBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                                borderSide: BorderSide.none),
                           ),
                         ),
                         Container(
-                          height: 200,
+                          height: 400,
                           width: MediaQuery.of(context).size.width,
                           decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                            borderRadius: BorderRadius.vertical(
+                                bottom: Radius.circular(12)),
                           ),
                           child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ListView.builder(
-                                  itemCount: state.categories2.length,
-                                  itemBuilder: (context, int i) {
-                                    return Card(
-                                      child: ListTile(
-                                        onTap: () {
-                                          setState(() {
-                                            income.category2 = state.categories2[i];
-                                            categoryController.text = income.category2.name;
-                                          });
-                                        },
-                                        leading: Image.asset(
-                                          'assets/${state.categories2[i].icon}.png',
-                                          scale: 2,
+                            padding: const EdgeInsets.all(8.0),
+                            child: GridView.builder(
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 5, // Number of columns
+                                mainAxisSpacing: 10.0,
+                                crossAxisSpacing: 11.0,
+                                childAspectRatio: 0.5, // Adjust the item height
+                              ),
+                              itemCount: predefinedCategories.length,
+                              itemBuilder: (context, int i) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      income.category2 = predefinedCategories[i];
+                                      categoryController.text = income.category2.name;
+                                    });
+                                  },
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Color(predefinedCategories[i].color),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        title: Text(state.categories2[i].name),
-                                        tileColor: Color(state.categories2[i].color),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        trailing: IconButton(
-                                          icon: const Icon(Icons.delete),
-                                          onPressed: () {
-                                            // Dispatch delete category event
-                                            context.read<GetCategoriesBloc2>().add(DeleteCategory2(state.categories2[i]));
-                                          },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Image.asset(
+                                            'assets/${predefinedCategories[i].icon}.png',
+                                            fit: BoxFit.contain,
+                                            height: 50,
+                                            width: 50,
+                                          ),
                                         ),
                                       ),
-                                    );
-                                  }
-                              )
+                                      const SizedBox(height: 5),
+                                      Center(
+                                        child: Text(
+                                          predefinedCategories[i].name,
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         const SizedBox(
@@ -182,12 +227,17 @@ class _AddIncomeState extends State<AddIncome> {
                           textAlignVertical: TextAlignVertical.center,
                           readOnly: true,
                           onTap: () async {
-                            DateTime? newDate = await showDatePicker(context: context, initialDate: income.date, firstDate: DateTime(1900), lastDate: DateTime.now().add(const Duration(days: 365)));
+                            DateTime? newDate = await showDatePicker(
+                                context: context,
+                                initialDate: income.date,
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now()
+                                    .add(const Duration(days: 365)));
 
                             if (newDate != null) {
                               setState(() {
-                                dateController.text = DateFormat('dd/MM/yyyy').format(newDate);
-                                // selectDate = newDate;
+                                dateController.text =
+                                    DateFormat('dd/MM/yyyy').format(newDate);
                                 income.date = newDate;
                               });
                             }
@@ -201,7 +251,9 @@ class _AddIncomeState extends State<AddIncome> {
                               color: Colors.grey,
                             ),
                             hintText: 'Date',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none),
                           ),
                         ),
                         const SizedBox(
