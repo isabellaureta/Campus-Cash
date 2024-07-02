@@ -105,13 +105,13 @@ class _Budget503020PageState extends State<Budget503020Page> {
                     'Needs:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  Text('Rent, Utilities, Groceries, Transportation, Tuition'),
+                  Text('Groceries, Utilities, Public Transpo, House, Medical, Tuition Fees'),
                   SizedBox(height: 8),
                   Text(
                     'Wants:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  Text('Dining Out, Entertainment, Hobbies, Shopping'),
+                  Text('Dining, Entertainment, Shopping, Snacks/Coffee, Travel'),
                   SizedBox(height: 8),
                   Text(
                     'Savings:',
