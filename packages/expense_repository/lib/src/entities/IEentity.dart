@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/src/entities/entities.dart';
-
 import '../models/models.dart';
 
 class ExpenseEntity {
@@ -8,12 +7,14 @@ class ExpenseEntity {
   Category category;
   DateTime date;
   int amount;
+  String userId;
 
   ExpenseEntity({
     required this.expenseId,
     required this.category,
     required this.date,
     required this.amount,
+    required this.userId,
   });
 
   Map<String, Object?> toDocument() {
@@ -22,6 +23,7 @@ class ExpenseEntity {
       'category': category.toEntity().toDocument(),
       'date': date,
       'amount': amount,
+      'userId': userId,
     };
   }
 
@@ -31,10 +33,10 @@ class ExpenseEntity {
       category: Category.fromEntity(CategoryEntity.fromDocument(doc['category'])),
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'],
+      userId: doc['userId'],
     );
   }
 }
-
 
 
 class IncomeEntity {

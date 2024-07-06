@@ -3,10 +3,10 @@ import 'package:expense_repository/repositories.dart';
 import 'package:campuscash/screens/home/blocs/get_IncomeExpense_bloc/get_IncomeExpense_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'UserAccount/UserProfile.dart';
 import 'auth/bloc/auth_bloc.dart';
 import 'auth/firebase_auth_provider.dart';
 import 'main.dart';
+import 'screens/Profile/UserProfile.dart';
 import 'screens/home/views/home_screen.dart';
 import 'screens/addIncomeExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 

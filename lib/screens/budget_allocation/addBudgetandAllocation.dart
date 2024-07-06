@@ -43,7 +43,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
   Future<void> _deleteBudget(DocumentSnapshot document) async {
     try {
       await FirebaseFirestore.instance
-          .collection('budgets')
+          .collection('budget')
           .doc(document.id)
           .delete();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +130,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
                 () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => Budget503020Page()),
+                MaterialPageRoute(builder: (context) => BudgetInputPage()),
               );
             },
           ),
