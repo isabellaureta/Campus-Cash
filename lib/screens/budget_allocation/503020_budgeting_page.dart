@@ -1,6 +1,8 @@
 import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
 
+import '503020_records.dart';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -279,6 +281,22 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     ];
   }
 
+  void _navigateToSummaryPage() {
+    final remainingBudget = widget.totalBudget - _totalExpenses;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BudgetSummaryPage(
+          totalBudget: widget.totalBudget,
+          totalExpenses: _totalExpenses,
+          remainingBudget: remainingBudget,
+          expenses: _expenses,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalBudget = widget.totalBudget;
@@ -311,6 +329,13 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
               ],
             ),
           ),
+      Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _navigateToSummaryPage,
+          child: Text('View Summary'),
+        ),
+      )
         ],
       ),
     );

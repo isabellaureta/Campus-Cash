@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../budget_allocation/envelope_budgeting_page.dart';
 import '../blocs/create_expense_bloc/create_expense_bloc.dart';
 import '../blocs/get_categories_bloc/get_categories_bloc.dart';
 import '../views/category_creation2.dart';
@@ -80,6 +81,27 @@ class _AddExpenseState extends State<AddExpense> {
     expense.expenseId = const Uuid().v1();
     super.initState();
   }
+
+  /*void _saveExpense() {
+    setState(() {
+      expense.amount = double.parse(expenseController.text) as int;
+
+      // Find the envelope for the selected category
+      final envelope = envelopes.firstWhere((env) => env.category == expense.category);
+
+      // Deduct the expense amount from the remaining budget
+      if (envelope.remainingBudget >= expense.amount) {
+        envelope.remainingBudget -= expense.amount;
+        context.read<CreateExpenseBloc>().add(CreateExpense(expense));
+      } else {
+        // Handle overspending case (e.g., show an alert)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Insufficient funds in ${envelope.category.name} envelope'),
+        ));
+      }
+    });
+  }*/
+
 
   @override
   Widget build(BuildContext context) {
