@@ -1,6 +1,5 @@
 import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() => runApp(MyApp());
 
@@ -15,7 +14,6 @@ class MyApp extends StatelessWidget {
 
 class BudgetInputPage extends StatelessWidget {
   final _budgetController = TextEditingController();
-  final _frequencyController = TextEditingController();
   String? _selectedFrequency;
 
   @override
@@ -122,27 +120,42 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     '039': 0.02,
   };
 
-  final Map<String, double> _expenses = {};
+  final Map<String, String> _expenses = {};
+  final Map<String, TextEditingController> _controllers = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-  }
-
-  void _updateExpense(String categoryId, double amount) {
-    setState(() {
-      _totalExpenses -= _expenses[categoryId] ?? 0;
-      _totalExpenses += amount;
-      _expenses[categoryId] = amount;
-
-      _needsExpenses = _calculateCategoryExpenses(_needsAllocation.keys);
-      // Handle other categories if needed
+    _needsAllocation.keys.forEach((categoryId) {
+      _controllers[categoryId] = TextEditingController();
+    });
+    _getWantsCategories().forEach((category) {
+      _controllers[category.categoryId] = TextEditingController();
+    });
+    _getSavingsCategories().forEach((category) {
+      _controllers[category.categoryId] = TextEditingController();
     });
   }
 
   double _calculateCategoryExpenses(Iterable<String> categoryIds) {
-    return categoryIds.fold(0, (sum, categoryId) => sum + (_expenses[categoryId] ?? 0));
+    return categoryIds.fold(0, (sum, categoryId) {
+      final value = double.tryParse(_expenses[categoryId] ?? '0') ?? 0;
+      return sum + value;
+    });
+  }
+
+  void _updateExpense(String categoryId, String amount) {
+    setState(() {
+      double parsedAmount = double.tryParse(amount) ?? 0;
+      _totalExpenses -= double.tryParse(_expenses[categoryId] ?? '0') ?? 0;
+      _totalExpenses += parsedAmount;
+      _expenses[categoryId] = amount;
+
+      _needsExpenses = _calculateCategoryExpenses(_needsAllocation.keys);
+      _wantsExpenses = _calculateCategoryExpenses(_getWantsCategories().map((e) => e.categoryId));
+      _savingsExpenses = _calculateCategoryExpenses(_getSavingsCategories().map((e) => e.categoryId));
+    });
   }
 
   Widget _buildBudgetSummary() {
@@ -186,13 +199,22 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
             'Expenses: ₱${expenses.toStringAsFixed(2)}',
             style: TextStyle(fontSize: 16),
           ),
+          LinearProgressIndicator(
+            value: expenses / budget,
+            backgroundColor: Colors.grey[300],
+            color: Colors.blue,
+          ),
+          SizedBox(height: 16.0),
           Expanded(
             child: ListView.builder(
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final category = categories[index];
-                final categoryExpense = _expenses[category.categoryId] ?? 0;
-                final _expenseController = TextEditingController(text: categoryExpense.toString());
+                final categoryExpense = _expenses[category.categoryId] ?? '';
+                final _expenseController = _controllers[category.categoryId]!;
+
+                _expenseController.text = categoryExpense;
+
                 return ListTile(
                   leading: Image.asset(
                     category.icon,
@@ -203,14 +225,22 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
                   trailing: SizedBox(
                     width: 100,
                     child: TextField(
-                onChanged: (value) => _updateExpense(category.categoryId, value as double),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                prefixText: '₱',
-                hintText: '0.0',
+                      controller: _expenseController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        prefixText: '₱',
+                        hintText: '0.00',
+                      ),
+                      onChanged: (value) {
+                        final textSelection = _expenseController.selection;
+                        _updateExpense(category.categoryId, value);
+                        _expenseController.value = _expenseController.value.copyWith(
+                          selection: textSelection,
+                        );
+                      },
                     ),
                   ),
-                ));
+                );
               },
             ),
           ),
@@ -234,17 +264,31 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     ];
   }
 
+  List<Category> _getWantsCategories() {
+    return [
+      Category(icon: 'assets/Dining.png', name: 'Dining', color: 0xFF4DB6AC, categoryId: '005'),
+      Category(icon: 'assets/Travel.png', name: 'Travel', color: 0xFF9575CD, categoryId: '007'),
+      Category(icon: 'assets/Shopping.png', name: 'Shopping', color: 0xFF7986CB, categoryId: '008'),
+      Category(icon: 'assets/Personal Care.png', name: 'Personal Care', color: 0xFF7986CB, categoryId: '014'),
+    ];
+  }
+
+  List<Category> _getSavingsCategories() {
+    return [
+      Category(icon: 'assets/Savings.png', name: 'Savings', color: 0xFF7986CB, categoryId: '041'),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    double needsBudget = widget.totalBudget * 0.5;
-    double wantsBudget = widget.totalBudget * 0.3;
-    double savingsBudget = widget.totalBudget * 0.2;
-
-    final needsCategories = _getNeedsCategories();
+    final totalBudget = widget.totalBudget;
+    final needsBudget = totalBudget * 0.50;
+    final wantsBudget = totalBudget * 0.30;
+    final savingsBudget = totalBudget * 0.20;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('50/30/20 Budget Allocation'),
+        title: Text('50-30-20 Budget Allocation'),
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -254,16 +298,20 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildCategoryTab('Needs', needsBudget, _needsExpenses, needsCategories),
-          _buildCategoryTab('Wants', wantsBudget, _wantsExpenses, []),  // Add wants categories here
-          _buildCategoryTab('Savings', savingsBudget, _savingsExpenses, []),  // Add savings categories here
+          _buildBudgetSummary(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildCategoryTab('Needs', needsBudget, _needsExpenses, _getNeedsCategories()),
+                _buildCategoryTab('Wants', wantsBudget, _wantsExpenses, _getWantsCategories()),
+                _buildCategoryTab('Savings', savingsBudget, _savingsExpenses, _getSavingsCategories()),
+              ],
+            ),
+          ),
         ],
-      ),
-      bottomNavigationBar: BottomAppBar(
-        child: _buildBudgetSummary(),
       ),
     );
   }
