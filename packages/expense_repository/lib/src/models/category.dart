@@ -81,3 +81,18 @@ class Category2 {
   }
 }
 
+final List<Category> predefinedCategories = [
+  Category(icon: 'House', name: 'House', color: 0xFFAED581, categoryId: '017'),
+  Category(icon: 'Utilities', name: 'Utilities', color: 0xFF7986CB, categoryId: '018'),
+  Category(icon: 'Groceries', name: 'Groceries', color: 0xFF7986CB, categoryId: '023'),
+  Category(icon: 'Meals', name: 'Meals', color: 0xFF7986CB, categoryId: '026'),
+  Category(icon: 'Snacks', name: 'Snacks/Coffee', color: 0xFF7986CB, categoryId: '027'),
+  Category(icon: 'Medical', name: 'Medical', color: 0xFF7986CB, categoryId: '038'),
+  Category(icon: 'Insurance', name: 'Insurance', color: 0xFF7986CB, categoryId: '039'),
+  Category(icon: 'Tuition Fees', name: 'Tuition Fees', color: 0xFF81C784, categoryId: '012'),
+  Category(icon: 'School Supplies', name: 'School Supplies', color: 0xFF64B5F6, categoryId: '013'),
+  Category(icon: 'Public Transpo', name: 'Public Transpo', color: 0xFFBA68C8, categoryId: '015'),
+  Category(icon: 'Booked Transpo', name: 'Booked Transpo', color: 0xFF4DB6AC, categoryId: '016'),
+  Category(icon: 'Savings', name: 'Savings', color: 0xFF7986CB, categoryId: '041'),
+];
+
