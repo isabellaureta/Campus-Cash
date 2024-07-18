@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:bloc/bloc.dart';
 import 'package:campuscash/firebase_options.dart';
 import 'package:campuscash/screens/home/views/home_screen.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'app_view.dart';
@@ -26,16 +27,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  Bloc.observer = SimpleBlocObserver();
+  await FirebaseAppCheck.instance.activate();
+  Bloc.observer = SimpleBlocObserver(); // Ensure this is defined
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -45,7 +45,6 @@ class MyApp extends StatelessWidget {
     return const MyAppView();
   }
 }
-
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -117,7 +116,7 @@ class HomePage extends StatelessWidget {
 
   Future<DocumentSnapshot<Map<String, dynamic>>?> _getUserDetails(String userId) async {
     final DocumentSnapshot<Map<String, dynamic>> doc =
-    await FirebaseFirestore.instance.collection('userDetails').doc(userId).get();
+    await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
     if (doc.exists) {
       return doc;

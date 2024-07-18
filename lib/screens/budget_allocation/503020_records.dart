@@ -1,17 +1,74 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'addBudgetandAllocation.dart';
 
-class BudgetSummaryPage extends StatelessWidget {
+
+class BudgetSummaryPage extends StatefulWidget {
   final double totalBudget;
   final double totalExpenses;
   final double remainingBudget;
   final Map<String, String> expenses;
+  final String userId;
 
   BudgetSummaryPage({
     required this.totalBudget,
     required this.totalExpenses,
     required this.remainingBudget,
     required this.expenses,
+    required this.userId,
   });
+
+  @override
+  _BudgetSummaryPageState createState() => _BudgetSummaryPageState();
+}
+
+class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
+  double totalBudget = 0;
+  double totalExpenses = 0;
+  double remainingBudget = 0;
+  Map<String, String> expenses = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBudgetData();
+  }
+
+  Future<void> _fetchBudgetData() async {
+    final userId = widget.userId;
+    final docSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).get();
+
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map<String, dynamic>;
+      setState(() {
+        totalBudget = data['totalBudget'] ?? 0.0;
+        totalExpenses = data['totalExpenses'] ?? 0.0;
+        remainingBudget = totalBudget - totalExpenses;
+        // Fetch expenses from Firestore and update state
+        _fetchExpensesData();
+      });
+    }
+  }
+
+  Future<void> _fetchExpensesData() async {
+    final userId = widget.userId;
+    final needsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Needs').get();
+    final wantsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Wants').get();
+    final savingsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Savings').get();
+
+    setState(() {
+      expenses = {};
+      for (var doc in needsSnapshot.docs) {
+        expenses[doc.id] = doc.data()['amount'].toString();
+      }
+      for (var doc in wantsSnapshot.docs) {
+        expenses[doc.id] = doc.data()['amount'].toString();
+      }
+      for (var doc in savingsSnapshot.docs) {
+        expenses[doc.id] = doc.data()['amount'].toString();
+      }
+    });
+  }
 
   List<Map<String, String>> getCategories(String type) {
     if (type == 'Needs') {
@@ -43,42 +100,53 @@ class BudgetSummaryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Budget Summary'),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: 'Needs'),
-              Tab(text: 'Wants'),
-              Tab(text: 'Savings'),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddBudget(userId: widget.userId),
+          ),
+        );
+        return false;
+      },
+      child: DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text('Budget Allocation'),
+            bottom: TabBar(
+              tabs: [
+                Tab(text: 'Needs'),
+                Tab(text: 'Wants'),
+                Tab(text: 'Savings'),
+              ],
+            ),
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Total Budget: ₱${totalBudget.toStringAsFixed(2)}'),
+                    Text('Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}'),
+                    Text('Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    CategoryListView(type: 'Needs', expenses: expenses, categories: getCategories('Needs')),
+                    CategoryListView(type: 'Wants', expenses: expenses, categories: getCategories('Wants')),
+                    CategoryListView(type: 'Savings', expenses: expenses, categories: getCategories('Savings')),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Total Budget: ₱${totalBudget.toStringAsFixed(2)}'),
-                  Text('Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}'),
-                  Text('Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}'),
-                ],
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  CategoryListView(type: 'Needs', expenses: expenses, categories: getCategories('Needs')),
-                  CategoryListView(type: 'Wants', expenses: expenses, categories: getCategories('Wants')),
-                  CategoryListView(type: 'Savings', expenses: expenses, categories: getCategories('Savings')),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

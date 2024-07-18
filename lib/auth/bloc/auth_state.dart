@@ -36,9 +36,11 @@ class AuthStateForgotPassword extends AuthState {
 
 class AuthStateLoggedIn extends AuthState {
   final AuthUser user;
+  final Map<String, dynamic> userData;
 
   const AuthStateLoggedIn({
     required this.user,
+    required this.userData,
     required super.isLoading,
   });
 }

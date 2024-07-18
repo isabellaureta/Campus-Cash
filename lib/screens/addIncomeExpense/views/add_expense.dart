@@ -5,11 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-
-import '../../budget_allocation/envelope_budgeting_page.dart';
 import '../blocs/create_expense_bloc/create_expense_bloc.dart';
-import '../blocs/get_categories_bloc/get_categories_bloc.dart';
-import '../views/category_creation2.dart';
 import 'category_creation.dart';
 
 class AddExpense extends StatefulWidget {
@@ -26,54 +22,6 @@ class _AddExpenseState extends State<AddExpense> {
   late Expense expense;
   bool isLoading = false;
 
-  final List<Category> predefinedCategories = [
-    Category(icon: 'Education', name: 'Education', color: 0xFFE57373, categoryId: '011'),
-    Category(icon: 'Tuition Fees', name: 'Tuition Fees', color: 0xFF81C784, categoryId: '012'),
-    Category(icon: 'School Supplies', name: 'School Supplies', color: 0xFF64B5F6, categoryId: '013'),
-    Category(icon: 'Subscriptions', name: 'Subscriptions', color: 0xFFFFD54F, categoryId: '014'),
-    Category(icon: 'Public Transpo', name: 'Public Transpo', color: 0xFFBA68C8, categoryId: '015'),
-    Category(icon: 'Booked Transpo', name: 'Booked Transpo', color: 0xFF4DB6AC, categoryId: '016'),
-    Category(icon: 'House', name: 'House', color: 0xFFAED581, categoryId: '017'),
-    Category(icon: 'Utilities', name: 'Utilities', color: 0xFF7986CB, categoryId: '018'),
-
-    Category(icon: 'Laundry', name: 'Laundry', color: 0xFF7986CB, categoryId: '019'),
-    Category(icon: 'Family', name: 'Family', color: 0xFF7986CB, categoryId: '021'),
-    Category(icon: 'Load', name: 'Load', color: 0xFF7986CB, categoryId: '022'),
-    Category(icon: 'Groceries', name: 'Groceries', color: 0xFF7986CB, categoryId: '023'),
-    Category(icon: 'Fitness', name: 'Fitness', color: 0xFF7986CB, categoryId: '024'),
-    Category(icon: 'Dining', name: 'Dining', color: 0xFF7986CB, categoryId: '025'),
-    Category(icon: 'Meals', name: 'Meals', color: 0xFF7986CB, categoryId: '026'),
-
-    Category(icon: 'Snacks', name: 'Snacks/Coffee', color: 0xFF7986CB, categoryId: '027'),
-    Category(icon: 'Printing', name: 'Printing', color: 0xFF7986CB, categoryId: '028'),
-    Category(icon: 'Organizations', name: 'Organizations', color: 0xFF7986CB, categoryId: '029'),
-    Category(icon: 'Online Courses', name: 'Online Courses', color: 0xFF7986CB, categoryId: '031'),
-    Category(icon: 'School Events', name: 'School Events', color: 0xFF7986CB, categoryId: '032'),
-    Category(icon: 'Sports', name: 'Sports', color: 0xFF7986CB, categoryId: '033'),
-    Category(icon: 'Shopping', name: 'Shopping', color: 0xFF7986CB, categoryId: '034'),
-    Category(icon: 'Online Shopping', name: 'Online Shopping', color: 0xFF7986CB, categoryId: '035'),
-    Category(icon: 'Friends', name: 'Friends', color: 0xFF7986CB, categoryId: '036'),
-
-    Category(icon: 'Entertainment', name: 'Entertainment', color: 0xFF7986CB, categoryId: '037'),
-    Category(icon: 'Medical', name: 'Medical', color: 0xFF7986CB, categoryId: '038'),
-    Category(icon: 'Insurance', name: 'Insurance', color: 0xFF7986CB, categoryId: '039'),
-    Category(icon: 'Savings', name: 'Savings', color: 0xFF7986CB, categoryId: '041'),
-    Category(icon: 'Investments', name: 'Investments', color: 0xFF7986CB, categoryId: '042'),
-    Category(icon: 'Credit Cards', name: 'Credit Cards', color: 0xFF7986CB, categoryId: '043'),
-    Category(icon: 'Gifts', name: 'Gifts', color: 0xFF7986CB, categoryId: '044'),
-    Category(icon: 'Travel', name: 'Travel', color: 0xFF7986CB, categoryId: '045'),
-    Category(icon: 'Outings', name: 'Outings', color: 0xFF7986CB, categoryId: '046'),
-
-    Category(icon: 'Gas', name: 'Gas', color: 0xFF7986CB, categoryId: '047'),
-    Category(icon: 'Vehicle', name: 'Vehicle', color: 0xFF7986CB, categoryId: '048'),
-    Category(icon: 'Loans', name: 'Loans', color: 0xFF7986CB, categoryId: '049'),
-    Category(icon: 'Partner', name: 'Partner', color: 0xFF7986CB, categoryId: '051'),
-    Category(icon: 'Business', name: 'Business', color: 0xFF7986CB, categoryId: '052'),
-    Category(icon: 'Personal Care', name: 'Personal Care', color: 0xFF7986CB, categoryId: '053'),
-    Category(icon: 'Clothing', name: 'Clothing', color: 0xFF7986CB, categoryId: '054'),
-    Category(icon: 'Others', name: 'Others', color: 0xFF7986CB, categoryId: '055'),
-  ];
-
   @override
   void initState() {
     dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
@@ -81,27 +29,6 @@ class _AddExpenseState extends State<AddExpense> {
     expense.expenseId = const Uuid().v1();
     super.initState();
   }
-
-  /*void _saveExpense() {
-    setState(() {
-      expense.amount = double.parse(expenseController.text) as int;
-
-      // Find the envelope for the selected category
-      final envelope = envelopes.firstWhere((env) => env.category == expense.category);
-
-      // Deduct the expense amount from the remaining budget
-      if (envelope.remainingBudget >= expense.amount) {
-        envelope.remainingBudget -= expense.amount;
-        context.read<CreateExpenseBloc>().add(CreateExpense(expense));
-      } else {
-        // Handle overspending case (e.g., show an alert)
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Insufficient funds in ${envelope.category.name} envelope'),
-        ));
-      }
-    });
-  }*/
-
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +107,7 @@ class _AddExpenseState extends State<AddExpense> {
                         color: Colors.grey,
                       )
                           : Image.asset(
-                        'assets/${expense.category.icon}.png',
+                        '${expense.category.icon}',
                         scale: 2,
                       ),
                       suffixIcon: IconButton(
@@ -239,7 +166,7 @@ class _AddExpenseState extends State<AddExpense> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Image.asset(
-                                      'assets/${predefinedCategories[i].icon}.png',
+                                      '${predefinedCategories[i].icon}',
                                       fit: BoxFit.contain,
                                       height: 50,
                                       width: 50,

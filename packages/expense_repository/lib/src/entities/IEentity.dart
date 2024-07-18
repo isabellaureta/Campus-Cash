@@ -38,18 +38,19 @@ class ExpenseEntity {
   }
 }
 
-
 class IncomeEntity {
   String incomeId;
   Category2 category2;
   DateTime date;
   int amount;
+  String userId;
 
   IncomeEntity({
     required this.incomeId,
     required this.category2,
     required this.date,
     required this.amount,
+    required this.userId,
   });
 
   Map<String, Object?> toDocument() {
@@ -58,6 +59,7 @@ class IncomeEntity {
       'category2': category2.toEntity().toDocument(),
       'date': date,
       'amount': amount,
+      'userId': userId,
     };
   }
 
@@ -67,7 +69,7 @@ class IncomeEntity {
       category2: Category2.fromEntity(CategoryEntity2.fromDocument(doc['category2'])),
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'],
+      userId: doc['userId'],
     );
   }
 }
-

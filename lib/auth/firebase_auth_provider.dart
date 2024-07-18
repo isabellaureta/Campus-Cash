@@ -7,7 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth, FirebaseAuthException;
 
 Future<void> createUserDocument(String userId) async {
-  final userDocument = FirebaseFirestore.instance.collection('userDetails').doc(userId);
+  final userDocument = FirebaseFirestore.instance.collection('users').doc(userId);
   await userDocument.set({
     'firstTime': true,
     'name': '',
@@ -48,6 +48,7 @@ class FirebaseAuthProvider implements AuthProvider {
       throw GenericAuthException();
     }
   }
+
 
   @override
   AuthUser? get currentUser {

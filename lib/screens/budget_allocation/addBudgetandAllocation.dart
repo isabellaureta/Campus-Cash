@@ -6,12 +6,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '503020_budgeting_page.dart';
+import '503020_records.dart';
 import 'addBudget.dart';
 import 'envelope_budgeting_page.dart';
 
 class AddBudget extends StatefulWidget {
   @override
   State<AddBudget> createState() => _AddBudgetState();
+
+  final String userId;
+
+  AddBudget({required this.userId});
 }
 
 class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMixin {
@@ -21,10 +26,17 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     Tab(text: 'Budget Allocation'),
   ];
 
+  User? _currentUser;
+
+  void _fetchCurrentUser() {
+    _currentUser = FirebaseAuth.instance.currentUser;
+  }
+
   @override
   void initState() {
     _tabController = TabController(length: 2, vsync: this);
     super.initState();
+    _fetchCurrentUser();
   }
 
   @override
@@ -42,10 +54,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
 
   Future<void> _deleteBudget(DocumentSnapshot document) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('budget')
-          .doc(document.id)
-          .delete();
+      await FirebaseFirestore.instance.collection('budget').doc(document.id).delete();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Budget deleted')),
       );
@@ -127,11 +136,36 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
           _buildBudgetTechniqueButton(
             '50/30/20 Budgeting',
             'Allocate 50% to needs, 30% to wants, and 20% to savings.',
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => BudgetInputPage()),
-              );
+                () async {
+              final userId = _currentUser!.uid;
+              final docSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).get();
+
+              if (docSnapshot.exists) {
+                final data = docSnapshot.data() as Map<String, dynamic>;
+                final totalBudget = data['totalBudget'] ?? 0.0;
+                final totalExpenses = data['totalExpenses'] ?? 0.0;
+                final remainingBudget = totalBudget - totalExpenses;
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BudgetSummaryPage(
+                      totalBudget: totalBudget,
+                      totalExpenses: totalExpenses,
+                      remainingBudget: remainingBudget,
+                      expenses: {}, // Fetch expenses from Firestore
+                      userId: userId,
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BudgetInputPage(userId: userId),
+                  ),
+                );
+              }
             },
           ),
           _buildBudgetTechniqueButton(

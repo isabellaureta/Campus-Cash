@@ -21,14 +21,16 @@ class MainScreen extends StatefulWidget {
 }
 
 class Transaction {
+  final String id;
   final String name;
   final double amount;
   final DateTime date;
-  final bool isIncome; // True for income, false for expense
+  final bool isIncome;
   final int color;
   final String icon;
 
   Transaction({
+    required this.id,
     required this.name,
     required this.amount,
     required this.date,
@@ -36,10 +38,36 @@ class Transaction {
     required this.color,
     required this.icon,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'isIncome': isIncome,
+      'color': color,
+      'icon': icon,
+    };
+  }
+
+  factory Transaction.fromMap(Map<String, dynamic> map, String documentId) {
+    return Transaction(
+      id: documentId,
+      name: map['name'],
+      amount: map['amount'],
+      date: DateTime.parse(map['date']),
+      isIncome: map['isIncome'],
+      color: map['color'],
+      icon: map['icon'],
+    );
+  }
 }
 
 
+
 class _MainScreenState extends State<MainScreen> {
+  List<Transaction> transactions = [];
   final TextEditingController _totalBalanceController = TextEditingController();
   final DatabaseReference _balanceRef = FirebaseDatabase.instance.ref().child('balances');
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -50,7 +78,46 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _fetchBudgetData();
+    _loadTransactions();
   }
+
+  Future<void> _loadTransactions() async {
+    transactions = await _fetchTransactions();
+    setState(() {});
+  }
+
+  Future<void> _addTransaction(Transaction transaction) async {
+    await _saveTransaction(transaction);
+    _loadTransactions();
+  }
+
+  Future<List<Transaction>> _fetchTransactions() async {
+    User? user = _auth.currentUser;
+    if (user == null) return [];
+
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .get();
+
+    return snapshot.docs
+        .map((doc) => Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+  }
+
+  Future<void> _saveTransaction(Transaction transaction) async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .doc(transaction.id)
+        .set(transaction.toMap());
+  }
+
 
   Future<void> _fetchBudgetData() async {
     User? user = _auth.currentUser;
@@ -90,6 +157,7 @@ class _MainScreenState extends State<MainScreen> {
           isIncome: false,
           color: expense.category.color.toInt(),
           icon: expense.category.icon,
+          id: expense.userId
         ),
       );
     }
@@ -103,6 +171,7 @@ class _MainScreenState extends State<MainScreen> {
           isIncome: true,
           color: income.category2.color.toInt(),
           icon: income.category2.icon,
+            id: income.userId
         ),
       );
     }
@@ -409,7 +478,7 @@ class _MainScreenState extends State<MainScreen> {
                                       ),
                                     ),
                                     Image.asset(
-                                      'assets/${transactions[i].icon}.png',
+                                      '${transactions[i].icon}',
                                       scale: 2,
                                       color: Colors.white,
                                     ),
@@ -471,6 +540,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+
   @override
   void dispose() {
     _totalBalanceController.dispose();
@@ -506,14 +576,14 @@ class _MainScreenState extends State<MainScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                _deleteExpenseTransaction(expense); // Call the delete method
-                Navigator.of(context).pop(); // Close the dialog
+                _deleteExpenseTransaction(expense);
+                Navigator.of(context).pop();
               },
               child: const Text('Delete'),
             ),
@@ -552,14 +622,14 @@ class _MainScreenState extends State<MainScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                _deleteIncomeTransaction(income); // Call the delete method
-                Navigator.of(context).pop(); // Close the dialog
+                _deleteIncomeTransaction(income);
+                Navigator.of(context).pop();
               },
               child: const Text('Delete'),
             ),

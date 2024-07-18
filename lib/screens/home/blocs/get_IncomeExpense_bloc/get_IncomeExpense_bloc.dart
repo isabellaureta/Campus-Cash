@@ -6,7 +6,7 @@ part 'get_IncomeExpense_event.dart';
 part 'get_IncomeExpense_state.dart';
 
 class GetExpensesBloc extends Bloc<GetExpensesEvent, GetExpensesState> {
-  ExpenseRepository expenseRepository;
+  final ExpenseRepository expenseRepository;
 
   GetExpensesBloc(this.expenseRepository) : super(GetExpensesInitial()) {
     on<GetExpenses>((event, emit) async {
@@ -23,7 +23,7 @@ class GetExpensesBloc extends Bloc<GetExpensesEvent, GetExpensesState> {
 
 
 class GetIncomesBloc extends Bloc<GetIncomesEvent, GetIncomesState> {
-  IncomeRepository incomeRepository;
+  final IncomeRepository incomeRepository;
 
   GetIncomesBloc(this.incomeRepository) : super(GetIncomesInitial()) {
     on<GetIncomes>((event, emit) async {

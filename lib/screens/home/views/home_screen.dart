@@ -211,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return ChartScreen(expenses: expenses, income: incomes);
       case 2:
-        return AddBudget();
+        return AddBudget(userId: '',);
       case 3:
         return const CustomTabBarsPage();
       default:
