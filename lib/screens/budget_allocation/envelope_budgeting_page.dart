@@ -105,6 +105,9 @@ class _AllocationPageState extends State<AllocationPage> {
   double remainingIncome = 0.0;
   List<Category> selectedCategories = filteredCategories;
 
+  // Create a map to hold the TextEditingControllers for each category
+  final Map<String, TextEditingController> _controllers = {};
+
   final Map<String, double> allocationPercentages = {
     'House': 0.25,
     'Utilities': 0.10,
@@ -123,6 +126,20 @@ class _AllocationPageState extends State<AllocationPage> {
   void initState() {
     super.initState();
     remainingIncome = widget.income;
+
+    // Initialize the TextEditingControllers for each category
+    for (var category in filteredCategories) {
+      _controllers[category.name] = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the TextEditingControllers when done
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   void _allocate(String category, String amount) {
@@ -132,7 +149,6 @@ class _AllocationPageState extends State<AllocationPage> {
           allocations.values.fold(0.0, (sum, amount) => sum + (double.tryParse(amount) ?? 0.0));
     });
   }
-
 
   void _suggestAllocations() {
     setState(() {
@@ -144,14 +160,13 @@ class _AllocationPageState extends State<AllocationPage> {
       for (var category in selectedCategories) {
         double allocatedAmount = widget.income * (allocationPercentages[category.name] ?? 0.0);
         allocations[category.name] = allocatedAmount.toStringAsFixed(2);
+        _controllers[category.name]?.text = allocatedAmount.toStringAsFixed(2);
         totalAllocated += allocatedAmount;
       }
 
       remainingIncome = widget.income - totalAllocated;
     });
   }
-
-
 
   void _showCategorySelection() {
     showModalBottomSheet(
@@ -242,9 +257,7 @@ class _AllocationPageState extends State<AllocationPage> {
                         onChanged: (value) {
                           _allocate(category.name, value);
                         },
-                        controller: TextEditingController(
-                          text: allocations[category.name] ?? '',
-                        ),
+                        controller: _controllers[category.name],
                       ),
                     ),
                   );
@@ -261,7 +274,6 @@ class _AllocationPageState extends State<AllocationPage> {
                     ),
                   ),
                 );
-
               },
               child: Text('Confirm'),
             ),
@@ -271,6 +283,7 @@ class _AllocationPageState extends State<AllocationPage> {
     );
   }
 }
+
 
 void main() {
   runApp(MaterialApp(
