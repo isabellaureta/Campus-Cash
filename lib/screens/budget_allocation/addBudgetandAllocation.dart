@@ -174,7 +174,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
                 () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => EnvelopeBudgetingPage()),
+                MaterialPageRoute(builder: (context) => IncomeInputPage()),
               );
             },
           ),

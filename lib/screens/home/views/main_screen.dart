@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../Profile/UserProfile.dart';
+import '../../transaction_history/TransactionHistory.dart';
 
 
 class MainScreen extends StatefulWidget {
@@ -73,12 +74,24 @@ class _MainScreenState extends State<MainScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   double _totalBudget = 0;
   double _remainingBudget = 0;
+  String _userName = '';
 
   @override
   void initState() {
     super.initState();
     _fetchBudgetData();
     _loadTransactions();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      setState(() {
+        _userName = userDoc['name'] ?? 'John Doe';  // Set the fetched name, defaulting to 'John Doe'
+      });
+    }
   }
 
   Future<void> _loadTransactions() async {
@@ -151,13 +164,13 @@ class _MainScreenState extends State<MainScreen> {
     for (var expense in widget.expenses) {
       transactions.add(
         Transaction(
-          name: expense.category.name,
-          amount: expense.amount.toDouble(),
-          date: expense.date,
-          isIncome: false,
-          color: expense.category.color.toInt(),
-          icon: expense.category.icon,
-          id: expense.userId
+            name: expense.category.name,
+            amount: expense.amount.toDouble(),
+            date: expense.date,
+            isIncome: false,
+            color: expense.category.color.toInt(),
+            icon: expense.category.icon,
+            id: expense.userId
         ),
       );
     }
@@ -165,12 +178,12 @@ class _MainScreenState extends State<MainScreen> {
     for (var income in widget.incomes) {
       transactions.add(
         Transaction(
-          name: income.category2.name,
-          amount: income.amount.toDouble(),
-          date: income.date,
-          isIncome: true,
-          color: income.category2.color.toInt(),
-          icon: income.category2.icon,
+            name: income.category2.name,
+            amount: income.amount.toDouble(),
+            date: income.date,
+            isIncome: true,
+            color: income.category2.color.toInt(),
+            icon: income.category2.icon,
             id: income.userId
         ),
       );
@@ -224,8 +237,9 @@ class _MainScreenState extends State<MainScreen> {
                               MaterialPageRoute(
                                 builder: (context) => ProfilePage(),
                               ),
-                            );
-                          },
+                            ).then((_) {
+                              _fetchUserName();
+                            });                          },
                           child: Icon(
                             CupertinoIcons.person_fill,
                             color: Colors.yellow[800],
@@ -246,7 +260,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                         ),
                         Text(
-                          "John Doe",
+                          _userName,  // Display the fetched user name
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -434,13 +448,21 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    // Navigate to TransactionHistory screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TransactionHistory(transactions: transactions),
+                      ),
+                    );
+                  },
                   child: Text(
                     'View All',
                     style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.outline,
-                        fontWeight: FontWeight.w400
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.outline,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 )

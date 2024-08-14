@@ -8,19 +8,23 @@ class PayYourselfFirstPage extends StatefulWidget {
 
 class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   TextEditingController incomeController = TextEditingController();
-  TextEditingController savingsController = TextEditingController();
+  TextEditingController percentController = TextEditingController();
   String incomeType = 'Monthly';
+  double totalSavings = 0.0;
   double excessMoney = 0.0;
 
-  void calculateExcessMoney() {
+  void calculateSavingsAndExcessMoney() {
     double income = double.parse(incomeController.text);
-    double savings = double.parse(savingsController.text);
+    double percent = double.parse(percentController.text);
 
     if (incomeType == 'Weekly') {
       income *= 4; // Convert weekly income to monthly
     }
 
+    double savings = income * (percent / 100);
+
     setState(() {
+      totalSavings = savings;
       excessMoney = income - savings;
     });
   }
@@ -54,15 +58,20 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
               }).toList(),
             ),
             TextField(
-              controller: savingsController,
+              controller: percentController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Total Savings'),
+              decoration: InputDecoration(labelText: 'Percent of Income to Save'),
             ),
             ElevatedButton(
-              onPressed: calculateExcessMoney,
-              child: Text('Calculate Excess Money'),
+              onPressed: calculateSavingsAndExcessMoney,
+              child: Text('Calculate Savings and Excess Money'),
             ),
             SizedBox(height: 20),
+            Text(
+              'Total Savings: \$${totalSavings.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 20),
+            ),
+            SizedBox(height: 10),
             Text(
               'Excess Money: \$${excessMoney.toStringAsFixed(2)}',
               style: TextStyle(fontSize: 20),

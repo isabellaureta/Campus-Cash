@@ -1,12 +1,10 @@
-import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:percent_indicator/circular_percent_indicator.dart';
-import 'package:campuscash/auth/bloc/auth_bloc.dart';
-import 'package:campuscash/auth/bloc/auth_event.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
+import 'Notifications.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -14,250 +12,179 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  TextEditingController _email = TextEditingController();
-  TextEditingController dateOfBirth = TextEditingController();
-  TextEditingController password = TextEditingController();
-
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _notificationsEnabled = false;
+  String? _profileImageUrl;
+  File? _imageFile;
+  final NotificationHelper _notificationHelper = NotificationHelper();
+  TimeOfDay _selectedTime = TimeOfDay(hour: 20, minute: 0);
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    _loadUserProfile();
   }
 
-  Future<void> fetchUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
+  void _loadUserProfile() async {
+    User? user = _auth.currentUser;
     if (user != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('userDetails').doc(user.uid).get();
-      if (userDoc.exists) {
-        setState(() {
-          //_email.text = userDetails?.email ?? '';
-          //dateOfBirth.text = userDetails?.dateOfBirth ?? '';
-        });
-      } else {
-        // Handle the case where the document does not exist
-        print('User document does not exist');
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      setState(() {
+        _nameController.text = userDoc['name'];
+        _emailController.text = user.email!;
+        _contactController.text = userDoc['contact'];
+        _profileImageUrl = userDoc['profileImageUrl'];
+        _notificationsEnabled = userDoc['notificationsEnabled'];
+        _selectedTime = TimeOfDay(
+          hour: (userDoc['notificationHour'] ?? 20) as int,
+          minute: (userDoc['notificationMinute'] ?? 0) as int,
+        );
+      });
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
       }
-    } else {
-      // Handle the case where the user is not authenticated
-      print('User is not authenticated');
     }
   }
 
-  Future<void> updateUserDetails() async {
-    final user = FirebaseAuth.instance.currentUser;
+  void _updateUserProfile() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).update({
+        'name': _nameController.text,  // Update the user's name in Firebase
+        'contact': _contactController.text,
+        'profileImageUrl': _profileImageUrl,
+        'notificationsEnabled': _notificationsEnabled,
+        'notificationHour': _selectedTime.hour,
+        'notificationMinute': _selectedTime.minute,
+      });
+      if (_emailController.text != user.email) {
+        user.updateEmail(_emailController.text);
+      }
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
+      } else {
+        _notificationHelper.cancelNotification();
+      }
+    }
+  }
 
+
+  void _changePassword() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      user.updatePassword(_passwordController.text);
+    }
+  }
+
+  void _deleteAccount() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).delete();
+      user.delete();
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        _profileImageUrl = null; // Reset the URL since a new image is picked
+      });
+    }
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+    if (picked != null && picked != _selectedTime) {
+      setState(() {
+        _selectedTime = picked;
+      });
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    var size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: Colors.grey.withOpacity(0.05),
-      body: getBody(size),
-    );
-  }
-
-  Widget getBody(Size size) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          buildHeader(size),
-          SizedBox(height: 50),
-          buildUserDetailsForm(),
-        ],
+      appBar: AppBar(
+        title: Text('Profile Page'),
       ),
-    );
-  }
-
-  Widget buildHeader(Size size) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.01),
-          spreadRadius: 10,
-          blurRadius: 3,
-        ),
-      ]),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 60, right: 20, left: 20, bottom: 25),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            buildProfileHeader(),
-            SizedBox(height: 25),
-            buildProfileInfo(size),
-            SizedBox(height: 25),
-            buildBudgetCard(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildProfileHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "Profile",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        IconButton(
-          icon: Icon(Icons.logout),
-          onPressed: () {
-            context.read<AuthBloc>().add(AuthEventLogOut());
-            Navigator.of(context).pushReplacementNamed('/welcome');
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget buildProfileInfo(Size size) {
-    return Row(
-      children: [
-        Container(
-          width: (size.width - 40) * 0.4,
-          child: Stack(
-            children: [
-              RotatedBox(
-                quarterTurns: -2,
-                child: CircularPercentIndicator(
-                  circularStrokeCap: CircularStrokeCap.round,
-                  backgroundColor: Colors.grey.withOpacity(0.3),
-                  radius: 110.0,
-                  lineWidth: 6.0,
-                  percent: 0.53,
-                  progressColor: Colors.pinkAccent,
-                ),
-              ),
-              Positioned(
-                top: 16,
-                left: 13,
-                child: Container(
-                  width: 85,
-                  height: 85,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          width: (size.width - 40) * 0.6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              SizedBox(height: 10),
-              Text(
-                "Budget: 73.50",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black.withOpacity(0.4)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildBudgetCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.tertiary,
-            Theme.of(context).colorScheme.secondary,
-            Theme.of(context).colorScheme.primary,
-          ],
-          transform: GradientRotation(pi / 4),
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.pinkAccent.withOpacity(0.01),
-            spreadRadius: 10,
-            blurRadius: 3,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 25, bottom: 25),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "...",
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12, color: Colors.white),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "00.90",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-                ),
-              ],
-            ),
             GestureDetector(
-              onTap: updateUserDetails,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(13.0),
-                  child: Text(
-                    "Update",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
+              onTap: _pickImage,
+              child: CircleAvatar(
+                radius: 50,
+                backgroundImage: _imageFile != null
+                    ? FileImage(_imageFile!)
+                    : (_profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null) as ImageProvider?,
+                child: _imageFile == null && _profileImageUrl == null ? Icon(Icons.add_a_photo) : null,
               ),
+            ),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: _contactController,
+              decoration: InputDecoration(labelText: 'Contact Information'),
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: InputDecoration(labelText: 'New Password'),
+              obscureText: true,
+            ),
+            SwitchListTile(
+              title: Text('Enable Notifications'),
+              value: _notificationsEnabled,
+              onChanged: (bool value) {
+                setState(() {
+                  _notificationsEnabled = value;
+                });
+                if (value) {
+                  _notificationHelper.scheduleDailyNotification(_selectedTime);
+                } else {
+                  _notificationHelper.cancelNotification();
+                }
+              },
+            ),
+            ElevatedButton(
+              onPressed: () => _selectTime(context),
+              child: Text('Select Notification Time'),
+            ),
+            ElevatedButton(
+              onPressed: _updateUserProfile,
+              child: Text('Update Profile'),
+            ),
+            ElevatedButton(
+              onPressed: _changePassword,
+              child: Text('Change Password'),
+            ),
+            ElevatedButton(
+              onPressed: _deleteAccount,
+              child: Text('Delete Account'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget buildUserDetailsForm() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          buildTextField("Email", _email),
-          SizedBox(height: 20),
-          buildTextField("Date of birth", dateOfBirth),
-          SizedBox(height: 20),
-          buildTextField("Password", password, obscureText: true),
-        ],
-      ),
-    );
-  }
-
-  Widget buildTextField(String label, TextEditingController controller, {bool obscureText = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xff67727d)),
-        ),
-        TextField(
-          controller: controller,
-          cursorColor: Colors.black,
-          obscureText: obscureText,
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black),
-          decoration: InputDecoration(hintText: label, border: InputBorder.none),
-        ),
-      ],
     );
   }
 }

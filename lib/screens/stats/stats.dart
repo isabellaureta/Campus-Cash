@@ -161,7 +161,7 @@ class _ChartScreenState extends State<ChartScreen> {
                           ),
                         ),
                         Image.asset(
-                          'assets/${data.icon}.png',
+                          '${data.icon}',
                           scale: 2,
                           color: Colors.white,
                         ),

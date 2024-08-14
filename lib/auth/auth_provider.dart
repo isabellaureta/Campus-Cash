@@ -47,7 +47,7 @@ class FirebaseAuthProvider implements AuthProvider {
           'firstTime': true,
           'name': '',
           'url': '',
-          'user_id': user.uid,
+          'userId': user.uid,
         });
         return user;
       } else {

@@ -21,7 +21,7 @@ class ExpenseEntity {
     return {
       'expenseId': expenseId,
       'category': category.toEntity().toDocument(),
-      'date': date,
+      'date': Timestamp.fromDate(date),
       'amount': amount,
       'userId': userId,
     };
@@ -29,14 +29,17 @@ class ExpenseEntity {
 
   static ExpenseEntity fromDocument(Map<String, dynamic> doc) {
     return ExpenseEntity(
-      expenseId: doc['expenseId'],
+      expenseId: doc['expenseId'] as String,
       category: Category.fromEntity(CategoryEntity.fromDocument(doc['category'])),
       date: (doc['date'] as Timestamp).toDate(),
-      amount: doc['amount'],
-      userId: doc['userId'],
+      amount: doc['amount'] as int,
+      userId: doc['userId'] as String,
     );
   }
 }
+
+
+
 
 class IncomeEntity {
   String incomeId;

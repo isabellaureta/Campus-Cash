@@ -12,7 +12,7 @@ Future<void> createUserDocument(String userId) async {
     'firstTime': true,
     'name': '',
     'url': '',
-    'user_id': userId,
+    'userId': userId,
   });
 }
 

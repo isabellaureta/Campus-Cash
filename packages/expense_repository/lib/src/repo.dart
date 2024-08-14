@@ -1,18 +1,14 @@
 import 'package:expense_repository/repositories.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:developer';
 
 abstract class ExpenseRepository {
-
   Future<void> createCategory(Category category);
-
   Future<List<Category>> getCategory();
-
   Future<void> createExpense(Expense expense);
-
   Future<List<Expense>> getExpenses();
-
   Future<void> deleteCategory(Category category);
 }
-
 
 
 abstract class IncomeRepository {

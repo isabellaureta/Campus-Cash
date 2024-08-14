@@ -1,11 +1,11 @@
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseExpenseRepo implements ExpenseRepository {
   final categoryCollection = FirebaseFirestore.instance.collection('categories');
   final expenseCollection = FirebaseFirestore.instance.collection('expenses');
-
 
   @override
   Future<void> createCategory(Category category) async {
@@ -36,9 +36,20 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   @override
   Future<void> createExpense(Expense expense) async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No authenticated user found.');
+      }
+      final updatedExpense = Expense(
+        expenseId: expense.expenseId,
+        userId: user.uid, // Ensure the userId is set here
+        category: expense.category,
+        date: expense.date,
+        amount: expense.amount,
+      );
       await expenseCollection
-          .doc(expense.expenseId)
-          .set(expense.toEntity().toDocument());
+          .doc(updatedExpense.expenseId)
+          .set(updatedExpense.toEntity().toDocument());
     } catch (e) {
       log(e.toString());
       rethrow;

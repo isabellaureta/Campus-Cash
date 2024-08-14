@@ -1,4 +1,5 @@
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Expense {
   String expenseId;
@@ -14,6 +15,25 @@ class Expense {
     required this.date,
     required this.amount,
   });
+
+  static Future<Expense> createExpense({
+    required String expenseId,
+    required Category category,
+    required DateTime date,
+    required int amount,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('No authenticated user found.');
+    }
+    return Expense(
+      expenseId: expenseId,
+      userId: user.uid,
+      category: category,
+      date: date,
+      amount: amount,
+    );
+  }
 
   static final empty = Expense(
     expenseId: '',
