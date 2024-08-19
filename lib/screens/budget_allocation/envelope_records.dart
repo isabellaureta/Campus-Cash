@@ -3,23 +3,34 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'addBudgetandAllocation.dart';
 import 'envelope_budgeting_page.dart';
 
-class EnvelopeBudgetingPage extends StatelessWidget {
+class EnvelopeBudgetingPage extends StatefulWidget {
   final Map<String, double> allocations;
 
   EnvelopeBudgetingPage({required this.allocations});
 
   @override
+  _EnvelopeBudgetingPageState createState() => _EnvelopeBudgetingPageState();
+}
+
+class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
+  bool isSaving = false; // To track the saving state
+
+  @override
   Widget build(BuildContext context) {
     final List<Envelope> envelopes = filteredCategories.map((category) {
-      String allocatedAmount = allocations[category.name]?.toString() ?? '0.0';
+      String allocatedAmount = widget.allocations[category.name]?.toString() ?? '0.0';
       return Envelope(category: category, allocatedBudget: allocatedAmount);
     }).toList();
 
-
     // Function to save data to Firestore
     Future<void> saveToFirestore() async {
+      setState(() {
+        isSaving = true; // Disable the button to prevent multiple presses
+      });
+
       try {
         // Get the current user
         User? user = FirebaseAuth.instance.currentUser;
@@ -30,9 +41,9 @@ class EnvelopeBudgetingPage extends StatelessWidget {
         String userId = user.uid;
 
         // Reference to the user's document in the budgetEnvelopes collection
-        DocumentReference userDocRef =
-        FirebaseFirestore.instance.collection('budgetEnvelopes').doc(userId);
+        DocumentReference userDocRef = FirebaseFirestore.instance.collection('budgetEnvelopes').doc(userId);
 
+        // Save each envelope
         for (var envelope in envelopes) {
           await userDocRef.collection('envelopes').add({
             'categoryName': envelope.category.name,
@@ -41,13 +52,25 @@ class EnvelopeBudgetingPage extends StatelessWidget {
           });
         }
 
+        // Show a success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data saved successfully!')),
         );
+
+        // Navigate to AddBudget page
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => AddBudget(userId: '',)), // Replace with your AddBudget class
+              (route) => false,
+        );
       } catch (e) {
+        // Show an error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save data: $e')),
         );
+        setState(() {
+          isSaving = false; // Re-enable the button if saving fails
+        });
       }
     }
 
@@ -57,7 +80,7 @@ class EnvelopeBudgetingPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.save),
-            onPressed: saveToFirestore,
+            onPressed: isSaving ? null : saveToFirestore, // Disable button while saving
           ),
         ],
       ),
@@ -102,6 +125,5 @@ class EnvelopeBudgetingPage extends StatelessWidget {
         ),
       ),
     );
-
   }
 }
