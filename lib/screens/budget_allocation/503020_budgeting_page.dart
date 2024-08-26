@@ -4,12 +4,18 @@ import 'package:flutter/material.dart';
 import '503020_records.dart';
 
 
-class BudgetInputPage extends StatelessWidget {
+class BudgetInputPage extends StatefulWidget {
   final String userId;
 
   BudgetInputPage({required this.userId});
 
+  @override
+  State<BudgetInputPage> createState() => _BudgetInputPageState();
+}
+
+class _BudgetInputPageState extends State<BudgetInputPage> {
   final _budgetController = TextEditingController();
+
   String? _selectedFrequency;
 
   @override
@@ -19,7 +25,7 @@ class BudgetInputPage extends StatelessWidget {
         title: Text('Enter Budget and Frequency'),
       ),
       body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('503020').doc(userId).get(),
+        future: FirebaseFirestore.instance.collection('503020').doc(widget.userId).get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -36,7 +42,7 @@ class BudgetInputPage extends StatelessWidget {
               totalExpenses: totalExpenses,
               remainingBudget: remainingBudget,
               expenses: {}, // Fetch expenses from Firestore
-              userId: userId,
+              userId: widget.userId,
             );
           }
 
@@ -90,7 +96,7 @@ class BudgetInputPage extends StatelessWidget {
                           builder: (context) => Budget503020Page(
                             totalBudget: totalBudget,
                             frequency: _selectedFrequency!,
-                            userId: userId,
+                            userId: widget.userId,
                           ),
                         ),
                       );
@@ -142,6 +148,50 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     '026': 0.05,
     '038': 0.03,
     '039': 0.02,
+
+    '014': 0.00,
+    '016': 0.00,
+    '019': 0.00,
+    '021': 0.00,
+    '022': 0.00,
+    '031': 0.00,
+    '024': 0.00,
+    '025': 0.00,
+    '032': 0.00,
+    '027': 0.00,
+    '028': 0.00,
+    '029': 0.00,
+    '033': 0.00,
+    '034': 0.00,
+    '035': 0.00,
+    '036': 0.00,
+    '037': 0.00,
+    '041': 0.00,
+    '042': 0.00,
+    '043': 0.00,
+    '044': 0.00,
+    '045': 0.00,
+    '046': 0.00,
+    '047': 0.00,
+    '048': 0.00,
+    '049': 0.00,
+    '051': 0.00,
+    '052': 0.00,
+    '053': 0.00,
+    '054': 0.00,
+    '055': 0.00,
+    '056': 0.00,
+    '057': 0.00,
+    '058': 0.00,
+    '059': 0.00,
+    '060': 0.00,
+    '061': 0.00,
+    '062': 0.00,
+    '063': 0.00,
+    '064': 0.00,
+    '065': 0.00,
+    '066': 0.00,
+
   };
 
   final Map<String, String> _expenses = {};
@@ -403,9 +453,42 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCategoryTab('Needs', needsBudget, _needsExpenses, _getNeedsCategories()),
-                _buildCategoryTab('Wants', wantsBudget, _wantsExpenses, _getWantsCategories()),
-                _buildCategoryTab('Savings', savingsBudget, _savingsExpenses, _getSavingsCategories()),
+                // Needs Tab
+                Column(
+                  children: [
+                    Expanded(child: _buildCategoryTab('Needs', needsBudget, _needsExpenses, _getNeedsCategories())),
+                    IconButton(
+                      icon: Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () {
+                        _showNeedsSelectionPopup(context);
+                      },
+                    ),
+                  ],
+                ),
+                // Wants Tab
+                Column(
+                  children: [
+                    Expanded(child: _buildCategoryTab('Wants', wantsBudget, _wantsExpenses, _getWantsCategories())),
+                    IconButton(
+                      icon: Icon(Icons.edit, color: Colors.green),
+                      onPressed: () {
+                        _showWantsSelectionPopup(context);
+                      },
+                    ),
+                  ],
+                ),
+                // Savings Tab
+                Column(
+                  children: [
+                    Expanded(child: _buildCategoryTab('Savings', savingsBudget, _savingsExpenses, _getSavingsCategories())),
+                    IconButton(
+                      icon: Icon(Icons.edit, color: Colors.orange),
+                      onPressed: () {
+                        _showSavingsSelectionPopup(context);
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -418,6 +501,72 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
           ),
         ],
       ),
+    );
+  }
+
+  void _showNeedsSelectionPopup(BuildContext context) {
+    _showSelectionPopup(context, "Needs", needsCategoryIds);
+  }
+
+  void _showWantsSelectionPopup(BuildContext context) {
+    _showSelectionPopup(context, "Wants", wantsCategoryIds);
+  }
+
+  void _showSavingsSelectionPopup(BuildContext context) {
+    _showSelectionPopup(context, "Savings", savingsCategoryIds);
+  }
+
+
+  void _showSelectionPopup(BuildContext context, String categoryType, Set<String> selectedCategoryIds) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateInPopup) {
+            return Container(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Select $categoryType Categories', style: TextStyle(fontSize: 18)),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: predefinedCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = predefinedCategories[index];
+                        final isSelected = selectedCategoryIds.contains(category.categoryId);
+
+                        return CheckboxListTile(
+                          title: Text(category.name),
+                          value: isSelected,
+                          onChanged: (value) {
+                            setStateInPopup(() {
+                              if (value == true) {
+                                selectedCategoryIds.add(category.categoryId);
+                              } else {
+                                selectedCategoryIds.remove(category.categoryId);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Force rebuild with updated categories in main widget's state
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Text('Done'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
