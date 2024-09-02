@@ -406,11 +406,8 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     return predefinedCategories.where((category) => savingsCategoryIds.contains(category.categoryId)).toList();
   }
 
-  void _navigateToSummaryPage() async {
+  void _navigateToSummaryPage() {
     final remainingBudget = widget.totalBudget - _totalExpenses;
-
-    // Save data to Firestore
-    await _saveBudgetToFirestore();
 
     Navigator.pushReplacement(
       context,
@@ -425,6 +422,7 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       ),
     );
   }
+
 
 
   @override

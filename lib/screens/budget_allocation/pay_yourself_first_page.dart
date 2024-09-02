@@ -14,9 +14,9 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   double totalSavings = 0.0;
   double excessMoney = 0.0;
 
-  bool showAllocation = false;
+  bool showResult = false;
   final Map<String, String> allocations = {};
-  // Set selectedCategories to include only the allowed categories by default
+
   List<Category> selectedCategories = predefinedCategories
       .where((category) => allowedCategoryNames.contains(category.name))
       .toList();
@@ -49,7 +49,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
     setState(() {
       totalSavings = savings;
       excessMoney = income - savings;
-      showAllocation = true;
+      showResult = true;
 
       // Initialize TextEditingControllers for each category
       for (var category in selectedCategories) {
@@ -82,56 +82,159 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
     });
   }
 
-  void _showCategorySelection() {
+  void _navigateToShowAllocation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShowAllocationPage(
+          selectedCategories: selectedCategories,
+          controllers: _controllers,
+          excessMoney: excessMoney,
+          allocate: _allocate,
+          suggestAllocations: _suggestAllocations,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Pay Yourself First'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: incomeController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Income'),
+            ),
+            DropdownButton<String>(
+              value: incomeType,
+              onChanged: (String? newValue) {
+                setState(() {
+                  incomeType = newValue!;
+                });
+              },
+              items: <String>['Monthly', 'Weekly']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+            TextField(
+              controller: percentController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Percent of Income to Save'),
+            ),
+            ElevatedButton(
+              onPressed: calculateSavingsAndExcessMoney,
+              child: Text('Calculate Savings and Excess Money'),
+            ),
+            if (showResult) ...[
+              SizedBox(height: 20),
+              Text(
+                'Total Savings: \$${totalSavings.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 20),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Excess Money: \$${excessMoney.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 20),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _navigateToShowAllocation,
+                child: Text('Show Allocation'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ShowAllocationPage extends StatefulWidget {
+  final List<Category> selectedCategories;
+  final Map<String, TextEditingController> controllers;
+  final double excessMoney;
+  final Function(String, String) allocate;
+  final VoidCallback suggestAllocations;
+
+  ShowAllocationPage({
+    required this.selectedCategories,
+    required this.controllers,
+    required this.excessMoney,
+    required this.allocate,
+    required this.suggestAllocations,
+  });
+
+  @override
+  _ShowAllocationPageState createState() => _ShowAllocationPageState();
+}
+
+class _ShowAllocationPageState extends State<ShowAllocationPage> {
+  void _showCategorySelection(BuildContext parentContext) {
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
+          builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               padding: EdgeInsets.all(16.0),
               height: MediaQuery.of(context).size.height * 0.7,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Select Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Select Categories',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: predefinedCategories.length,
-                      itemBuilder: (context, index) {
-                        final category = predefinedCategories[index];
+                    child: ListView(
+                      children: predefinedCategories.map((category) {
                         return CheckboxListTile(
-                          title: Row(
-                            children: [
-                              Image.asset(
-                                category.icon,
-                                width: 24,
-                                height: 24,
-                                color: Color(category.color),
-                              ),
-                              SizedBox(width: 8),
-                              Text(category.name),
-                            ],
-                          ),
-                          value: selectedCategories.contains(category),
+                          title: Text(category.name),
+                          value: widget.selectedCategories.contains(category),
                           onChanged: (bool? value) {
-                            setState(() {
+                            setModalState(() {
                               if (value == true) {
-                                selectedCategories.add(category);
+                                setState(() {
+                                  widget.selectedCategories.add(category);
+                                  widget.controllers[category.name] = TextEditingController();
+                                });
                               } else {
-                                selectedCategories.remove(category);
+                                setState(() {
+                                  widget.selectedCategories.remove(category);
+                                  widget.controllers.remove(category.name);
+                                });
                               }
                             });
                           },
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
                   ElevatedButton(
                     onPressed: () {
+                      // Update the parent state with the modified selected categories
                       setState(() {
-                        _suggestAllocations(); // Recalculate allocations based on selected categories
+                        widget.suggestAllocations(); // Recalculate allocations based on updated categories
                       });
                       Navigator.pop(context);
                     },
@@ -147,122 +250,72 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   }
 
   @override
-  void dispose() {
-    // Dispose of the TextEditingControllers when done
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Pay Yourself First'),
-            IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: _showCategorySelection,
-            ),
-          ],
-        ),
+        title: Text('Show Allocation'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.auto_awesome), // Changed icon to auto_awesome
+            onPressed: widget.suggestAllocations, // Transferred function to icon
+          ),
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () => _showCategorySelection(context),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            if (!showAllocation) ...[
-              TextField(
-                controller: incomeController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: 'Income'),
-              ),
-              DropdownButton<String>(
-                value: incomeType,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    incomeType = newValue!;
-                  });
-                },
-                items: <String>['Monthly', 'Weekly']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              TextField(
-                controller: percentController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: 'Percent of Income to Save'),
-              ),
-              ElevatedButton(
-                onPressed: calculateSavingsAndExcessMoney,
-                child: Text('Calculate Savings and Excess Money'),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Total Savings: \$${totalSavings.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 20),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Excess Money: \$${excessMoney.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 20),
-              ),
-            ],
-            if (showAllocation) ...[
-              Text('Remaining Income for Allocation: \$${excessMoney.toStringAsFixed(2)}'),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: selectedCategories.length,
-                  itemBuilder: (context, index) {
-                    final category = selectedCategories[index];
-                    return ListTile(
-                      title: Row(
-                        children: [
-                          Image.asset(
-                            category.icon,
-                            width: 24,
-                            height: 24,
-                            color: Color(category.color),
-                          ),
-                          SizedBox(width: 8),
-                          Text(category.name),
-                        ],
-                      ),
-                      trailing: Container(
-                        width: 100,
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: 'Amount',
-                          ),
-                          onChanged: (value) {
-                            _allocate(category.name, value);
-                          },
-                          controller: _controllers[category.name],
+            Text('Remaining Income for Allocation: \$${widget.excessMoney.toStringAsFixed(2)}'),
+            Expanded(
+              child: ListView.builder(
+                itemCount: widget.selectedCategories.length,
+                itemBuilder: (context, index) {
+                  final category = widget.selectedCategories[index];
+                  return ListTile(
+                    title: Row(
+                      children: [
+                        Image.asset(
+                          category.icon,
+                          width: 24,
+                          height: 24,
+                          color: Color(category.color),
                         ),
+                        SizedBox(width: 8),
+                        Text(category.name),
+                      ],
+                    ),
+                    trailing: Container(
+                      width: 100,
+                      child: TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Amount',
+                        ),
+                        onChanged: (value) {
+                          widget.allocate(category.name, value);
+                        },
+                        controller: widget.controllers[category.name],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
-              ElevatedButton(
-                onPressed: _suggestAllocations,
-                child: Text('Suggest Allocations'),
-              ),
-            ],
+            ),
+            ElevatedButton(
+              onPressed: widget.suggestAllocations,
+              child: Text('Continue'),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
 
 const List<String> allowedCategoryNames = [
   'House',

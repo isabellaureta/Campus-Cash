@@ -1,8 +1,7 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
 import 'addBudgetandAllocation.dart';
-
 
 class BudgetSummaryPage extends StatefulWidget {
   final double totalBudget;
@@ -32,45 +31,53 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
   @override
   void initState() {
     super.initState();
-    _fetchBudgetData();
+    totalBudget = widget.totalBudget;
+    totalExpenses = widget.totalExpenses;
+    remainingBudget = widget.remainingBudget;
+    expenses = widget.expenses;
   }
 
-  Future<void> _fetchBudgetData() async {
+  Future<void> _saveBudgetToFirestore() async {
     final userId = widget.userId;
-    final docSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).get();
+    final firestore = FirebaseFirestore.instance;
+    final userDocRef = firestore.collection('503020').doc(userId);
 
-    if (docSnapshot.exists) {
-      final data = docSnapshot.data() as Map<String, dynamic>;
-      setState(() {
-        totalBudget = data['totalBudget'] ?? 0.0;
-        totalExpenses = data['totalExpenses'] ?? 0.0;
-        remainingBudget = totalBudget - totalExpenses;
-        // Fetch expenses from Firestore and update state
-        _fetchExpensesData();
-      });
-    }
-  }
-
-  Future<void> _fetchExpensesData() async {
-    final userId = widget.userId;
-    final needsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Needs').get();
-    final wantsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Wants').get();
-    final savingsSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).collection('Savings').get();
-
-    setState(() {
-      expenses = {};
-      for (var doc in needsSnapshot.docs) {
-        expenses[doc.id] = doc.data()['amount'].toString();
-      }
-      for (var doc in wantsSnapshot.docs) {
-        expenses[doc.id] = doc.data()['amount'].toString();
-      }
-      for (var doc in savingsSnapshot.docs) {
-        expenses[doc.id] = doc.data()['amount'].toString();
-      }
+    // Save user budget info
+    await userDocRef.set({
+      'userId': userId,
+      'totalBudget': totalBudget,
+      'totalExpenses': totalExpenses,
+      'remainingBudget': remainingBudget,
     });
+
+    // Save Needs categories
+    final needsCollectionRef = userDocRef.collection('Needs');
+    widget.expenses.forEach((categoryId, amount) async {
+      final category = predefinedCategories.firstWhere((cat) => cat.categoryId == categoryId);
+      await needsCollectionRef.doc(categoryId).set({
+        'categoryId': categoryId,
+        'name': category.name,
+        'amount': double.tryParse(amount) ?? 0.0,
+        'icon': category.icon,
+        'color': category.color,
+        'dateCreated': DateTime.now().toIso8601String(),
+      });
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Data saved successfully!')),
+    );
+
+    // Navigate back to AddBudget page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => AddBudget(userId: userId)),
+    );
   }
 
+
+
+  // Define the getCategories method to return category lists based on the type
   List<Map<String, String>> getCategories(String type) {
     if (type == 'Needs') {
       return [
@@ -92,10 +99,12 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
         {'icon': 'assets/Shopping.png', 'name': 'Shopping', 'id': '008'},
         {'icon': 'assets/Personal Care.png', 'name': 'Personal Care', 'id': '014'},
       ];
-    } else {
+    } else if (type == 'Savings') {
       return [
         {'icon': 'assets/Savings.png', 'name': 'Savings', 'id': '041'},
       ];
+    } else {
+      return [];
     }
   }
 
@@ -146,6 +155,13 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: _saveBudgetToFirestore,
+                  child: Text('Save to Firestore'),
+                ),
+              ),
             ],
           ),
         ),
@@ -153,6 +169,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
     );
   }
 }
+
 
 class CategoryListView extends StatelessWidget {
   final String type;

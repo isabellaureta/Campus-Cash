@@ -52,9 +52,8 @@ class _ChartScreenState extends State<ChartScreen> {
           );
         }
       }
-    }else if (selectedType == 'Expense Flow') {
+    } else if (selectedType == 'Expense Flow') {
       // Handle Expense Flow here
-      // Example: You can just set an empty list for now
       chartData = [];
     }
 
@@ -74,9 +73,8 @@ class _ChartScreenState extends State<ChartScreen> {
       appBar: AppBar(
         title: Text('Transaction Statistics'),
       ),
-      body: Center(
+      body: SingleChildScrollView( // Make the Column scrollable
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -88,7 +86,8 @@ class _ChartScreenState extends State<ChartScreen> {
                     generateChartData();
                   });
                 },
-                items: <String>['Expenses', 'Income', 'Expense Flow', 'Income Flow'].map<DropdownMenuItem<String>>((String value) {
+                items: <String>['Expenses', 'Income', 'Expense Flow', 'Income Flow']
+                    .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
@@ -98,50 +97,44 @@ class _ChartScreenState extends State<ChartScreen> {
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Expanded(
-                child: SfCircularChart(
-                  legend: const Legend(
-                    isVisible: true,
-                    position: LegendPosition.right,
-                    overflowMode: LegendItemOverflowMode.wrap,
-                    iconHeight: 18,
-                    iconWidth: 18,
-                  ),
-                  series: <CircularSeries>[
-                    PieSeries<ChartData, String>(
-                      dataSource: chartData,
-                      xValueMapper: (ChartData data, _) => data.categoryName,
-                      yValueMapper: (ChartData data, _) => data.totalAmount,
-                      pointColorMapper: (ChartData data, _) => Color(data.color),
-                      dataLabelSettings: const DataLabelSettings(
-                        isVisible: true,
-                        labelPosition: ChartDataLabelPosition.inside,
-                        connectorLineSettings: ConnectorLineSettings(
-                          type: ConnectorType.line,
-                        ),
-                        textStyle: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(2.0, 2.0),
-                              blurRadius: 3.0,
-                              color: Color.fromARGB(255, 0, 0, 0), // Shadow color
-                            ),
-                          ]
-                        ),
-                      ),
-                      enableTooltip: true,
-                    ),
-                  ],
+              child: SfCircularChart(
+                legend: const Legend(
+                  isVisible: true,
+                  position: LegendPosition.right,
+                  overflowMode: LegendItemOverflowMode.wrap,
+                  iconHeight: 18,
+                  iconWidth: 18,
                 ),
+                series: <CircularSeries>[
+                  PieSeries<ChartData, String>(
+                    dataSource: chartData,
+                    xValueMapper: (ChartData data, _) => data.categoryName,
+                    yValueMapper: (ChartData data, _) => data.totalAmount,
+                    pointColorMapper: (ChartData data, _) => Color(data.color),
+                    dataLabelSettings: const DataLabelSettings(
+                      isVisible: true,
+                      labelPosition: ChartDataLabelPosition.inside,
+                      connectorLineSettings: ConnectorLineSettings(
+                        type: ConnectorType.line,
+                      ),
+                      textStyle: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(2.0, 2.0),
+                            blurRadius: 3.0,
+                            color: Color.fromARGB(255, 0, 0, 0), // Shadow color
+                          ),
+                        ],
+                      ),
+                    ),
+                    enableTooltip: true,
+                  ),
+                ],
               ),
             ),
-            ...chartData.map((data) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
-            )).toList(),
-
             SizedBox(height: 16.0),
             ...chartData.map((data) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -168,7 +161,6 @@ class _ChartScreenState extends State<ChartScreen> {
                       ],
                     ),
                   ),
-
                   SizedBox(width: 18),
                   Expanded(
                     child: Column(
@@ -215,7 +207,8 @@ class _ChartScreenState extends State<ChartScreen> {
                               ),
                             ),
                             Container(
-                              width: (data.totalAmount / totalAmount) * MediaQuery.of(context).size.width,
+                              width: (data.totalAmount / totalAmount) *
+                                  MediaQuery.of(context).size.width,
                               height: 10,
                               decoration: BoxDecoration(
                                 color: Color(data.color),
@@ -230,8 +223,8 @@ class _ChartScreenState extends State<ChartScreen> {
                   ),
                 ],
               ),
-            )
-            ).toList(),
+            ))
+                .toList(),
           ],
         ),
       ),

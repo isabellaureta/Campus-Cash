@@ -145,19 +145,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _updateRemainingBudget(double expenseAmount) async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      double newRemainingBudget = _remainingBudget - expenseAmount;
-      await FirebaseFirestore.instance.collection('budgets').doc(user.uid).update({
-        'remaining': newRemainingBudget,
-      });
-      setState(() {
-        _remainingBudget = newRemainingBudget;
-      });
-    }
-  }
-
   List<Transaction> _getAllTransactions() {
     List<Transaction> transactions = [];
 
