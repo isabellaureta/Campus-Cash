@@ -42,57 +42,6 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     _tabController.addListener(_handleTabChange);
   }
 
-  void _handleTabChange() {
-    if (_tabController.index == 1) {
-      _fetchSavedData();
-    }
-  }
-
-  Future<void> _fetchSavedData() async {
-    try {
-      if (_currentUser == null) return;
-
-      // Fetch saved envelopes
-      final envelopeRef = FirebaseFirestore.instance.collection('budgetEnvelopes').doc(_currentUser!.uid);
-      final envelopesSnapshot = await envelopeRef.collection('envelopes').get();
-
-      // Fetch saved budget summary
-      final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
-      final budgetSnapshot = await budgetRef.get();
-
-      setState(() {
-        savedEnvelopes = envelopesSnapshot.docs.map((doc) {
-          final data = doc.data();
-          return Envelope(
-            category: predefinedCategories.firstWhere((cat) => cat.name == data['categoryName']),
-            allocatedBudget: data['allocatedBudget'] ?? '0.0',
-          );
-        }).toList();
-
-        if (budgetSnapshot.exists) {
-          savedBudgetSummary = budgetSnapshot.data();
-        }
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch saved data: $e')),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  void _navigateToAddBudgetPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => SetBudgetPage()),
-    );
-  }
-
   Future<void> _deleteBudget(DocumentSnapshot document) async {
     try {
       await FirebaseFirestore.instance.collection('budget').doc(document.id).delete();
@@ -104,6 +53,60 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
         SnackBar(content: Text('Failed to delete budget: $e')),
       );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Budget'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: _tabs,
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: _navigateToAddBudgetPage,
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    textStyle: TextStyle(fontSize: 18),
+                    minimumSize: Size(double.infinity, 50),
+                  ),
+                  child: Text('Add Budget'),
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('budgets').snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+                    final budgets = snapshot.data!.docs;
+
+                    return ListView.builder(
+                      itemCount: budgets.length,
+                      itemBuilder: (context, index) {
+                        return _buildBudgetCard(budgets[index]);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          _buildBudgetAllocation(),
+        ],
+      ),
+    );
   }
 
   Widget _buildBudgetCard(DocumentSnapshot document) {
@@ -160,6 +163,57 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
           ),
         ),
       ),
+    );
+  }
+
+  void _handleTabChange() {
+    if (_tabController.index == 1) {
+      _fetchSavedData();
+    }
+  }
+
+  Future<void> _fetchSavedData() async {
+    try {
+      if (_currentUser == null) return;
+
+      // Fetch saved envelopes
+      final envelopeRef = FirebaseFirestore.instance.collection('budgetEnvelopes').doc(_currentUser!.uid);
+      final envelopesSnapshot = await envelopeRef.collection('envelopes').get();
+
+      // Fetch saved budget summary
+      final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
+      final budgetSnapshot = await budgetRef.get();
+
+      setState(() {
+        savedEnvelopes = envelopesSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return Envelope(
+            category: predefinedCategories.firstWhere((cat) => cat.name == data['categoryName']),
+            allocatedBudget: data['allocatedBudget'] ?? '0.0',
+          );
+        }).toList();
+
+        if (budgetSnapshot.exists) {
+          savedBudgetSummary = budgetSnapshot.data();
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch saved data: $e')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _navigateToAddBudgetPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SetBudgetPage()),
     );
   }
 
@@ -395,60 +449,6 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               );
             },
           ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Budget'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: _tabs,
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToAddBudgetPage,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    textStyle: TextStyle(fontSize: 18),
-                    minimumSize: Size(double.infinity, 50),
-                  ),
-                  child: Text('Add Budget'),
-                ),
-              ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('budgets').snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-
-                    final budgets = snapshot.data!.docs;
-
-                    return ListView.builder(
-                      itemCount: budgets.length,
-                      itemBuilder: (context, index) {
-                        return _buildBudgetCard(budgets[index]);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          _buildBudgetAllocation(),
         ],
       ),
     );

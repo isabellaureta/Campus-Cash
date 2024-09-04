@@ -42,7 +42,20 @@ class CreateIncomeBloc extends Bloc<CreateIncomeEvent, CreateIncomeState> {
     on<CreateIncome>((event, emit) async {
       emit(CreateIncomeLoading());
       try {
-        await incomeRepository.createIncome(event.income);
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('No authenticated user found.');
+        }
+
+        final income = Income(
+          incomeId: event.income.incomeId,
+          userId: user.uid,
+          category2: event.income.category2,
+          date: event.income.date,
+          amount: event.income.amount,
+        );
+
+        await incomeRepository.createIncome(income);
         emit(CreateIncomeSuccess());
       } catch (e) {
         emit(CreateIncomeFailure());

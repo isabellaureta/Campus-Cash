@@ -40,6 +40,8 @@ class FirebaseExpenseRepo implements ExpenseRepository {
       if (user == null) {
         throw Exception('No authenticated user found.');
       }
+
+      // Save the expense to Firestore
       final updatedExpense = Expense(
         expenseId: expense.expenseId,
         userId: user.uid, // Ensure the userId is set here
@@ -47,11 +49,52 @@ class FirebaseExpenseRepo implements ExpenseRepository {
         date: expense.date,
         amount: expense.amount,
       );
-      await expenseCollection
+
+      await FirebaseFirestore.instance
+          .collection('expenses')
           .doc(updatedExpense.expenseId)
           .set(updatedExpense.toEntity().toDocument());
+
+      // After saving the expense, update the corresponding budget's remaining amount
+      await _updateRemainingBudget(user.uid, updatedExpense.amount);
+
+      log('Expense created and budget updated successfully.');
     } catch (e) {
-      log(e.toString());
+      log('Failed to create expense: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  Future<void> _updateRemainingBudget(String userId, int expenseAmount) async {
+    try {
+      // Fetch the user's budget document
+      DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
+          .collection('budgets')
+          .doc(userId) // Assuming the budget document is identified by userId
+          .get();
+
+      if (budgetDoc.exists) {
+        Map<String, dynamic> budgetData = budgetDoc.data() as Map<String, dynamic>;
+        double currentRemaining = budgetData['remaining'] ?? 0.0;
+
+        // Deduct the expense amount from the remaining budget
+        double updatedRemaining = currentRemaining - expenseAmount;
+
+        // Ensure the remaining amount doesn't go below zero
+        updatedRemaining = updatedRemaining < 0 ? 0 : updatedRemaining;
+
+        // Update the remaining amount in the budget document
+        await FirebaseFirestore.instance
+            .collection('budgets')
+            .doc(budgetDoc.id)
+            .update({'remaining': updatedRemaining});
+
+        log('Remaining budget updated successfully.');
+      } else {
+        throw Exception('Budget document not found.');
+      }
+    } catch (e) {
+      log('Failed to update remaining budget: ${e.toString()}');
       rethrow;
     }
   }
@@ -118,11 +161,17 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
   @override
   Future<void> createIncome(Income income) async {
     try {
+      // Save the income to Firestore
       await incomeCollection
           .doc(income.incomeId)
           .set(income.toEntity().toDocument());
+
+      // After saving the income, update the corresponding budget's remaining amount
+      await _updateRemainingBudget(income.userId, income.amount);
+
+      log('Income created and budget updated successfully.');
     } catch (e) {
-      log(e.toString());
+      log('Failed to create income: ${e.toString()}');
       rethrow;
     }
   }
@@ -141,6 +190,37 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
     }
   }
 
+  Future<void> _updateRemainingBudget(String userId, int incomeAmount) async {
+    try {
+      // Fetch the user's budget document
+      DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
+          .collection('budgets')
+          .doc(userId) // Assuming the budget document is identified by userId
+          .get();
+
+      if (budgetDoc.exists) {
+        Map<String, dynamic> budgetData = budgetDoc.data() as Map<String, dynamic>;
+        double currentRemaining = budgetData['remaining'] ?? 0.0;
+
+        // Add the income amount to the remaining budget
+        double updatedRemaining = currentRemaining + incomeAmount;
+
+        // Update the remaining amount in the budget document
+        await FirebaseFirestore.instance
+            .collection('budgets')
+            .doc(budgetDoc.id)
+            .update({'remaining': updatedRemaining});
+
+        log('Remaining budget updated successfully after adding income.');
+      } else {
+        throw Exception('Budget document not found.');
+      }
+    } catch (e) {
+      log('Failed to update remaining budget: ${e.toString()}');
+      rethrow;
+    }
+  }
+
   @override
   Future<void> deleteCategory2(Category2 category2) async {
     try {
@@ -151,4 +231,56 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
       rethrow;
     }
   }
+
+  /*
+   @override
+  Future<void> createIncome(Income income) async {
+    try {
+      // Save the income to Firestore
+      await incomeCollection
+          .doc(income.incomeId)
+          .set(income.toEntity().toDocument());
+
+      // After saving the income, update the corresponding budget's remaining amount
+      await _updateRemainingBudget(income.userId, income.amount);
+
+      log('Income created and budget updated successfully.');
+    } catch (e) {
+      log('Failed to create income: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  // Method to update the remaining budget in Firestore after saving an income
+  Future<void> _updateRemainingBudget(String userId, int incomeAmount) async {
+    try {
+      // Fetch the user's budget document
+      DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
+          .collection('budgets')
+          .doc(userId) // Assuming the budget document is identified by userId
+          .get();
+
+      if (budgetDoc.exists) {
+        Map<String, dynamic> budgetData = budgetDoc.data() as Map<String, dynamic>;
+        double currentRemaining = budgetData['remaining'] ?? 0.0;
+
+        // Add the income amount to the remaining budget
+        double updatedRemaining = currentRemaining + incomeAmount;
+
+        // Update the remaining amount in the budget document
+        await FirebaseFirestore.instance
+            .collection('budgets')
+            .doc(budgetDoc.id)
+            .update({'remaining': updatedRemaining});
+
+        log('Remaining budget updated successfully after adding income.');
+      } else {
+        throw Exception('Budget document not found.');
+      }
+    } catch (e) {
+      log('Failed to update remaining budget: ${e.toString()}');
+      rethrow;
+    }
+  }
+   */
 }

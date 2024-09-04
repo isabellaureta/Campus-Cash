@@ -65,12 +65,9 @@ class Transaction {
   }
 }
 
-
-
 class _MainScreenState extends State<MainScreen> {
   List<Transaction> transactions = [];
   final TextEditingController _totalBalanceController = TextEditingController();
-  final DatabaseReference _balanceRef = FirebaseDatabase.instance.ref().child('balances');
   final FirebaseAuth _auth = FirebaseAuth.instance;
   double _totalBudget = 0;
   double _remainingBudget = 0;
@@ -97,11 +94,6 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _loadTransactions() async {
     transactions = await _fetchTransactions();
     setState(() {});
-  }
-
-  Future<void> _addTransaction(Transaction transaction) async {
-    await _saveTransaction(transaction);
-    _loadTransactions();
   }
 
   Future<List<Transaction>> _fetchTransactions() async {
@@ -145,6 +137,7 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+
   List<Transaction> _getAllTransactions() {
     List<Transaction> transactions = [];
 
@@ -179,16 +172,6 @@ class _MainScreenState extends State<MainScreen> {
     transactions.sort((a, b) => b.date.compareTo(a.date));
 
     return transactions;
-  }
-
-  void _saveDataToFirestore() {
-    _balanceRef.update({
-      'total_balance': double.parse(_totalBalanceController.text),
-    }).then((value) {
-      print('Total balance saved to Firebase');
-    }).catchError((error) {
-      print('Error saving total balance: $error');
-    });
   }
 
   @override
@@ -299,7 +282,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '₱${_totalBudget.toStringAsFixed(2)}',
+                    '₱${_remainingBudget.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontSize: 40,
                         color: Colors.white,
@@ -307,28 +290,6 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Remaining Budget  ',
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '₱${_remainingBudget.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold
-                        ),
-                      ),
-                    ],
-                  ),
 
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
