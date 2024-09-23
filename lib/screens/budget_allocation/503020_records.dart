@@ -1,205 +1,260 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
-import 'addBudgetandAllocation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BudgetSummaryPage extends StatefulWidget {
-  final double totalBudget;
-  final double totalExpenses;
-  final double remainingBudget;
-  final Map<String, String> expenses;
   final String userId;
 
-  BudgetSummaryPage({
-    required this.totalBudget,
-    required this.totalExpenses,
-    required this.remainingBudget,
-    required this.expenses,
-    required this.userId,
-  });
+  BudgetSummaryPage({required this.userId, required totalBudget, required totalExpenses, required remainingBudget, required Map expenses});
 
   @override
   _BudgetSummaryPageState createState() => _BudgetSummaryPageState();
 }
 
-class _BudgetSummaryPageState extends State<BudgetSummaryPage> {
-  double totalBudget = 0;
-  double totalExpenses = 0;
-  double remainingBudget = 0;
-  Map<String, String> expenses = {};
+class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    totalBudget = widget.totalBudget;
-    totalExpenses = widget.totalExpenses;
-    remainingBudget = widget.remainingBudget;
-    expenses = widget.expenses;
+    _tabController = TabController(length: 3, vsync: this); // TabController for Needs, Wants, Savings
   }
 
-  Future<void> _saveBudgetToFirestore() async {
-    final userId = widget.userId;
+  // Fetch budget data from Firestore
+  Future<Map<String, dynamic>> _fetchBudgetData() async {
     final firestore = FirebaseFirestore.instance;
-    final userDocRef = firestore.collection('503020').doc(userId);
+    final userDocRef = firestore.collection('503020').doc(widget.userId);
 
-    // Save user budget info
-    await userDocRef.set({
-      'userId': userId,
-      'totalBudget': totalBudget,
-      'totalExpenses': totalExpenses,
-      'remainingBudget': remainingBudget,
-    });
+    // Fetch main budget info
+    final budgetSnapshot = await userDocRef.get();
+    final budgetData = budgetSnapshot.data() ?? {};
 
-    // Save Needs categories
-    final needsCollectionRef = userDocRef.collection('Needs');
-    widget.expenses.forEach((categoryId, amount) async {
-      final category = predefinedCategories.firstWhere((cat) => cat.categoryId == categoryId);
-      await needsCollectionRef.doc(categoryId).set({
-        'categoryId': categoryId,
-        'name': category.name,
-        'amount': double.tryParse(amount) ?? 0.0,
-        'icon': category.icon,
-        'color': category.color,
-        'dateCreated': DateTime.now().toIso8601String(),
-      });
-    });
+    // Fetch Needs categories
+    final needsSnapshot = await userDocRef.collection('Needs').get();
+    final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Data saved successfully!')),
-    );
+    // Fetch Wants categories
+    final wantsSnapshot = await userDocRef.collection('Wants').get();
+    final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Navigate back to AddBudget page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => AddBudget(userId: userId)),
+    // Fetch Savings categories
+    final savingsSnapshot = await userDocRef.collection('Savings').get();
+    final savingsCategories = savingsSnapshot.docs.map((doc) => doc.data()).toList();
+
+    return {
+      'budgetData': budgetData,
+      'needsCategories': needsCategories,
+      'wantsCategories': wantsCategories,
+      'savingsCategories': savingsCategories,
+    };
+  }
+
+  // Widget to display the category list
+  Widget _buildCategoryList(List<dynamic> categories) {
+    if (categories.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text('No categories available'),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return ListTile(
+          leading: Image.asset(
+            category['icon'], // Assuming icons are stored with their paths
+            width: 24.0,
+            height: 24.0,
+          ),
+          title: Text(category['name']),
+          trailing: Text('₱${category['amount'].toStringAsFixed(2)}'),
+        );
+      },
     );
   }
 
+  // Build the TabBar view for Needs, Wants, and Savings
+  Widget _buildTabContent(String tabName, List<dynamic> categories) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$tabName Categories',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16.0),
+          Expanded(child: _buildCategoryList(categories)),
+        ],
+      ),
+    );
+  }
 
+  // Function to delete the budget from Firestore
+  Future<void> _deleteBudget() async {
+    final firestore = FirebaseFirestore.instance;
+    final userDocRef = firestore.collection('503020').doc(widget.userId);
 
-  // Define the getCategories method to return category lists based on the type
-  List<Map<String, String>> getCategories(String type) {
-    if (type == 'Needs') {
-      return [
-        {'icon': 'assets/Education.png', 'name': 'Education', 'id': '011'},
-        {'icon': 'assets/Tuition Fees.png', 'name': 'Tuition Fees', 'id': '012'},
-        {'icon': 'assets/School Supplies.png', 'name': 'School Supplies', 'id': '013'},
-        {'icon': 'assets/Public Transpo.png', 'name': 'Public Transpo', 'id': '015'},
-        {'icon': 'assets/House.png', 'name': 'House', 'id': '017'},
-        {'icon': 'assets/Utilities.png', 'name': 'Utilities', 'id': '018'},
-        {'icon': 'assets/Groceries.png', 'name': 'Groceries', 'id': '023'},
-        {'icon': 'assets/Meals.png', 'name': 'Meals', 'id': '026'},
-        {'icon': 'assets/Medical.png', 'name': 'Medical', 'id': '038'},
-        {'icon': 'assets/Insurance.png', 'name': 'Insurance', 'id': '039'},
-      ];
-    } else if (type == 'Wants') {
-      return [
-        {'icon': 'assets/Dining.png', 'name': 'Dining', 'id': '005'},
-        {'icon': 'assets/Travel.png', 'name': 'Travel', 'id': '007'},
-        {'icon': 'assets/Shopping.png', 'name': 'Shopping', 'id': '008'},
-        {'icon': 'assets/Personal Care.png', 'name': 'Personal Care', 'id': '014'},
-      ];
-    } else if (type == 'Savings') {
-      return [
-        {'icon': 'assets/Savings.png', 'name': 'Savings', 'id': '041'},
-      ];
-    } else {
-      return [];
+    try {
+      // Delete subcollections (Needs, Wants, Savings)
+      await userDocRef.collection('Needs').get().then((snapshot) {
+        for (DocumentSnapshot ds in snapshot.docs) {
+          ds.reference.delete();
+        }
+      });
+      await userDocRef.collection('Wants').get().then((snapshot) {
+        for (DocumentSnapshot ds in snapshot.docs) {
+          ds.reference.delete();
+        }
+      });
+      await userDocRef.collection('Savings').get().then((snapshot) {
+        for (DocumentSnapshot ds in snapshot.docs) {
+          ds.reference.delete();
+        }
+      });
+
+      // Delete the main budget document
+      await userDocRef.delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Budget deleted successfully')),
+      );
+
+      // Optionally, navigate back or refresh the page
+      Navigator.pop(context);
+
+    } catch (e) {
+      print("Error deleting budget: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete budget')),
+      );
     }
+  }
+
+  // Show confirmation dialog before deleting the budget
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Budget'),
+          content: Text('Are you sure you want to delete your 50/30/20 budget? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // Close dialog
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                _deleteBudget(); // Proceed with deletion
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AddBudget(userId: widget.userId),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Budget Summary'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDelete(); // Show confirmation dialog to delete the budget
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete Budget', style: TextStyle(color: Colors.red)),
+                ),
+              ];
+            },
+            icon: Icon(Icons.settings), // Settings icon for menu options
           ),
-        );
-        return false;
-      },
-      child: DefaultTabController(
-        length: 3,
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text('Budget Allocation'),
-            bottom: TabBar(
-              tabs: [
-                Tab(text: 'Needs'),
-                Tab(text: 'Wants'),
-                Tab(text: 'Savings'),
-              ],
-            ),
-          ),
-          body: Column(
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: 'Needs'),
+            Tab(text: 'Wants'),
+            Tab(text: 'Savings'),
+          ],
+        ),
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchBudgetData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading budget data.'));
+          } else if (!snapshot.hasData || snapshot.data == null) {
+            return Center(child: Text('No budget data found.'));
+          }
+
+          final budgetData = snapshot.data!['budgetData'];
+          final needsCategories = snapshot.data!['needsCategories'];
+          final wantsCategories = snapshot.data!['wantsCategories'];
+          final savingsCategories = snapshot.data!['savingsCategories'];
+
+          final totalBudget = budgetData['totalBudget'] ?? 0.0;
+          final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
+          final remainingBudget = budgetData['remainingBudget'] ?? 0.0;
+          final frequency = budgetData['frequency'] ?? 'N/A';
+
+          return Column(
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Budget: ₱${totalBudget.toStringAsFixed(2)}'),
-                    Text('Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}'),
-                    Text('Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}'),
+                    Text(
+                      'Total Budget: ₱${totalBudget.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Text(
+                      'Frequency: $frequency',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Text(
+                      'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Text(
+                      'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 16.0),
                   ],
                 ),
               ),
               Expanded(
                 child: TabBarView(
+                  controller: _tabController,
                   children: [
-                    CategoryListView(type: 'Needs', expenses: expenses, categories: getCategories('Needs')),
-                    CategoryListView(type: 'Wants', expenses: expenses, categories: getCategories('Wants')),
-                    CategoryListView(type: 'Savings', expenses: expenses, categories: getCategories('Savings')),
+                    _buildTabContent('Needs', needsCategories),
+                    _buildTabContent('Wants', wantsCategories),
+                    _buildTabContent('Savings', savingsCategories),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _saveBudgetToFirestore,
-                  child: Text('Save to Firestore'),
-                ),
-              ),
             ],
-          ),
-        ),
+          );
+        },
       ),
-    );
-  }
-}
-
-
-class CategoryListView extends StatelessWidget {
-  final String type;
-  final Map<String, String> expenses;
-  final List<Map<String, String>> categories;
-
-  CategoryListView({
-    required this.type,
-    required this.expenses,
-    required this.categories,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        final amount = expenses[category['id']] ?? '0.00';
-
-        return ListTile(
-          leading: Image.asset(
-            category['icon']!,
-            width: 24,
-            height: 24,
-          ),
-          title: Text(category['name']!),
-          trailing: Text('₱$amount'),
-        );
-      },
     );
   }
 }

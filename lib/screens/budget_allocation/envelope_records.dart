@@ -2,8 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'addBudgetandAllocation.dart';
 import 'envelope_budgeting_page.dart';
 
 class EnvelopeBudgetingPage extends StatefulWidget {
@@ -18,6 +16,62 @@ class EnvelopeBudgetingPage extends StatefulWidget {
 class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   bool isSaving = false; // To track the saving state
 
+  // Function to delete the user's envelope budgeting data from Firestore
+  Future<void> _deleteEnvelopeData() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Reference to the user's document in Firestore under 'envelopeAllocations'
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid);
+
+      // Delete the 'envelopes' subcollection under the user's document
+      final envelopeCollection = await userDocRef.collection('envelopes').get();
+      for (var doc in envelopeCollection.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete the main document in 'envelopeAllocations' for this user (optional)
+      await userDocRef.delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Envelope budgeting data deleted successfully')),
+      );
+
+      // Optionally, navigate the user back or to a different page after deletion
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete data: $e')),
+      );
+    }
+  }
+
+  // Show a confirmation dialog before deleting
+  Future<void> _confirmDelete() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Envelope Budgeting'),
+        content: Text('Are you sure you want to delete your envelope budgeting data? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // Cancel
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true), // Confirm
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await _deleteEnvelopeData(); // Proceed with deletion if confirmed
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Envelope> envelopes = filteredCategories.map((category) {
@@ -25,62 +79,13 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       return Envelope(category: category, allocatedBudget: allocatedAmount);
     }).toList();
 
-    // Function to save data to Firestore
-    Future<void> saveToFirestore() async {
-      setState(() {
-        isSaving = true; // Disable the button to prevent multiple presses
-      });
-
-      try {
-        // Get the current user
-        User? user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          throw Exception('No user logged in');
-        }
-
-        String userId = user.uid;
-
-        // Reference to the user's document in the budgetEnvelopes collection
-        DocumentReference userDocRef = FirebaseFirestore.instance.collection('budgetEnvelopes').doc(userId);
-
-        // Save each envelope
-        for (var envelope in envelopes) {
-          await userDocRef.collection('envelopes').add({
-            'categoryName': envelope.category.name,
-            'allocatedBudget': envelope.allocatedBudget,
-            'remainingBudget': envelope.remainingBudget,
-          });
-        }
-
-        // Show a success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data saved successfully!')),
-        );
-
-        // Navigate to AddBudget page
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => AddBudget(userId: '',)), // Replace with your AddBudget class
-              (route) => false,
-        );
-      } catch (e) {
-        // Show an error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save data: $e')),
-        );
-        setState(() {
-          isSaving = false; // Re-enable the button if saving fails
-        });
-      }
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Envelope Budgeting'),
         actions: [
           IconButton(
-            icon: Icon(Icons.save),
-            onPressed: isSaving ? null : saveToFirestore, // Disable button while saving
+            icon: Icon(Icons.settings), // Settings icon
+            onPressed: _confirmDelete, // Show delete confirmation dialog
           ),
         ],
       ),
@@ -110,11 +115,11 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Allocated: \$${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
+                      'Allocated: \₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 13),
                     ),
                     Text(
-                      'Remaining: \$${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
+                      'Remaining: \₱${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 13),
                     ),
                   ],

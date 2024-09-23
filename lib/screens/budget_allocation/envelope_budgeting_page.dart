@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'envelope_records.dart';
@@ -104,8 +106,9 @@ class _AllocationPageState extends State<AllocationPage> {
   final Map<String, String> allocations = {};
   double remainingIncome = 0.0;
   List<Category> selectedCategories = filteredCategories;
+  bool isSaving = false;
+  String? warningMessage;
 
-  // Create a map to hold the TextEditingControllers for each category
   final Map<String, TextEditingController> _controllers = {};
 
   final Map<String, double> allocationPercentages = {
@@ -127,7 +130,6 @@ class _AllocationPageState extends State<AllocationPage> {
     super.initState();
     remainingIncome = widget.income;
 
-    // Initialize the TextEditingControllers for each category
     for (var category in filteredCategories) {
       _controllers[category.name] = TextEditingController();
     }
@@ -135,7 +137,6 @@ class _AllocationPageState extends State<AllocationPage> {
 
   @override
   void dispose() {
-    // Dispose of the TextEditingControllers when done
     for (var controller in _controllers.values) {
       controller.dispose();
     }
@@ -145,26 +146,18 @@ class _AllocationPageState extends State<AllocationPage> {
   void _allocate(String category, String amount) {
     setState(() {
       allocations[category] = amount;
-      remainingIncome = widget.income -
-          allocations.values.fold(0.0, (sum, amount) => sum + (double.tryParse(amount) ?? 0.0));
-    });
-  }
 
-  void _suggestAllocations() {
-    setState(() {
-      allocations.clear();
-      remainingIncome = widget.income;
-
-      double totalAllocated = 0.0;
-
-      for (var category in selectedCategories) {
-        double allocatedAmount = widget.income * (allocationPercentages[category.name] ?? 0.0);
-        allocations[category.name] = allocatedAmount.toStringAsFixed(2);
-        _controllers[category.name]?.text = allocatedAmount.toStringAsFixed(2);
-        totalAllocated += allocatedAmount;
-      }
+      double totalAllocated = allocations.values.fold(0.0, (sum, amount) {
+        return sum + (double.tryParse(amount) ?? 0.0);
+      });
 
       remainingIncome = widget.income - totalAllocated;
+
+      if (remainingIncome < 0) {
+        warningMessage = 'Exceeding remaining income';
+      } else {
+        warningMessage = null; // Clear the warning message if within limits
+      }
     });
   }
 
@@ -174,7 +167,7 @@ class _AllocationPageState extends State<AllocationPage> {
       isScrollControlled: true,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
+          builder: (BuildContext context, StateSetter modalSetState) {
             return Container(
               padding: EdgeInsets.all(16.0),
               height: MediaQuery.of(context).size.height * 0.7,
@@ -189,11 +182,15 @@ class _AllocationPageState extends State<AllocationPage> {
                           title: Text(category.name),
                           value: selectedCategories.contains(category),
                           onChanged: (bool? value) {
-                            setState(() {
+                            modalSetState(() {
                               if (value == true) {
                                 selectedCategories.add(category);
                               } else {
                                 selectedCategories.remove(category);
+
+                                // Clear the allocation and controller for unselected categories
+                                _controllers[category.name]?.clear();
+                                allocations.remove(category.name);
                               }
                             });
                           },
@@ -203,9 +200,8 @@ class _AllocationPageState extends State<AllocationPage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        _suggestAllocations(); // Recalculate allocations based on selected categories
-                      });
+                      // Update the main state when Done is pressed
+                      setState(() {});
                       Navigator.pop(context);
                     },
                     child: Text('Done'),
@@ -219,16 +215,56 @@ class _AllocationPageState extends State<AllocationPage> {
     );
   }
 
+  Future<void> _saveToFirestore() async {
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      String userId = user.uid;
+
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(userId);
+
+      for (var entry in allocations.entries) {
+        await userDocRef.collection('envelopes').add({
+          'categoryName': entry.key,
+          'allocatedAmount': double.tryParse(entry.value) ?? 0.0,
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Allocations saved successfully!')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EnvelopeBudgetingPage(
+            allocations: allocations.map((key, value) => MapEntry(key, double.tryParse(value) ?? 0.0)),
+          ),
+        ),
+      );
+    } catch (e) {
+      // Show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save allocations: $e')),
+      );
+    } finally {
+      setState(() {
+        isSaving = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Allocate Your Budget'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.auto_awesome),
-            onPressed: _suggestAllocations,
-          ),
           IconButton(
             icon: Icon(Icons.edit),
             onPressed: _showCategorySelection,
@@ -239,7 +275,19 @@ class _AllocationPageState extends State<AllocationPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text('Remaining Income: \$${remainingIncome.toStringAsFixed(2)}'),
+            Text('Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: remainingIncome < 0 ? Colors.red : Colors.black, // Change color if exceeding
+                )
+            ),
+            if (warningMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  warningMessage!,
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ),
             Expanded(
               child: ListView.builder(
                 itemCount: selectedCategories.length,
@@ -265,17 +313,8 @@ class _AllocationPageState extends State<AllocationPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EnvelopeBudgetingPage(
-                      allocations: allocations.map((key, value) => MapEntry(key, double.tryParse(value) ?? 0.0)),
-                    ),
-                  ),
-                );
-              },
-              child: Text('Confirm'),
+              onPressed: (isSaving || remainingIncome < 0) ? null : _saveToFirestore,
+              child: isSaving ? CircularProgressIndicator() : Text('Confirm'),
             ),
           ],
         ),
@@ -284,9 +323,3 @@ class _AllocationPageState extends State<AllocationPage> {
   }
 }
 
-
-void main() {
-  runApp(MaterialApp(
-    home: IncomeInputPage(),
-  ));
-}

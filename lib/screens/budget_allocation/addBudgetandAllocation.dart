@@ -9,6 +9,7 @@ import '503020_budgeting_page.dart';
 import '503020_records.dart';
 import 'addBudget.dart';
 import 'envelope_budgeting_page.dart';
+import 'envelope_records.dart';
 
 class AddBudget extends StatefulWidget {
   final String userId;
@@ -166,6 +167,8 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     );
   }
 
+
+
   void _handleTabChange() {
     if (_tabController.index == 1) {
       _fetchSavedData();
@@ -176,27 +179,62 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     try {
       if (_currentUser == null) return;
 
-      // Fetch saved envelopes
-      final envelopeRef = FirebaseFirestore.instance.collection('budgetEnvelopes').doc(_currentUser!.uid);
-      final envelopesSnapshot = await envelopeRef.collection('envelopes').get();
+      // Reference to envelope allocations in Firestore
+      final envelopeRef = FirebaseFirestore.instance
+          .collection('envelopeAllocations')
+          .doc(_currentUser!.uid)
+          .collection('envelopes');
 
-      // Fetch saved budget summary
-      final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
-      final budgetSnapshot = await budgetRef.get();
+      // Fetch the envelope data to check if any exists
+      final envelopeSnapshot = await envelopeRef.get();
 
-      setState(() {
-        savedEnvelopes = envelopesSnapshot.docs.map((doc) {
-          final data = doc.data();
-          return Envelope(
-            category: predefinedCategories.firstWhere((cat) => cat.name == data['categoryName']),
-            allocatedBudget: data['allocatedBudget'] ?? '0.0',
-          );
-        }).toList();
+      // If there are envelopes saved, navigate to EnvelopeBudgetingPage
+      if (envelopeSnapshot.docs.isNotEmpty) {
+        final allocations = <String, double>{};
 
-        if (budgetSnapshot.exists) {
-          savedBudgetSummary = budgetSnapshot.data();
+        for (var doc in envelopeSnapshot.docs) {
+          var data = doc.data();
+          allocations[data['categoryName']] = (data['allocatedAmount'] as num).toDouble();
         }
-      });
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EnvelopeBudgetingPage(
+              allocations: allocations,
+            ),
+          ),
+        );
+      } else {
+        // If no envelopes found, fetch saved budget summary from Firestore
+        final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
+        final budgetSnapshot = await budgetRef.get();
+
+        // Check if there is a saved budget and navigate to BudgetSummaryPage
+        if (budgetSnapshot.exists) {
+          final data = budgetSnapshot.data() as Map<String, dynamic>;
+          final totalBudget = data['totalBudget'] ?? 0.0;
+          final totalExpenses = data['totalExpenses'] ?? 0.0;
+          final remainingBudget = totalBudget - totalExpenses;
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BudgetSummaryPage(
+                totalBudget: totalBudget,
+                totalExpenses: totalExpenses,
+                remainingBudget: remainingBudget,
+                expenses: {
+                  'Needs': data['Needs'],
+                  'Wants': data['Wants'],
+                  'Savings': data['Savings'],
+                }, // Pass the 'Needs', 'Wants', and 'Savings' data
+                userId: _currentUser!.uid,
+              ),
+            ),
+          );
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch saved data: $e')),
@@ -219,7 +257,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
 
   Widget _buildBudgetAllocation() {
     if (savedBudgetSummary != null) {
-      // Display saved budget summary like in BudgetSummaryPage
+      // If there's a saved budget, display the summary similar to BudgetSummaryPage
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,6 +267,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Total Budget: ₱${savedBudgetSummary!['totalBudget'].toStringAsFixed(2)}'),
+                Text('Frequency: ${savedBudgetSummary!['frequency']}'),
                 Text('Total Expenses: ₱${savedBudgetSummary!['totalExpenses'].toStringAsFixed(2)}'),
                 Text('Remaining Budget: ₱${savedBudgetSummary!['remainingBudget'].toStringAsFixed(2)}'),
               ],
@@ -239,6 +278,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               length: 3,
               child: Scaffold(
                 appBar: AppBar(
+                  automaticallyImplyLeading: false,
                   bottom: TabBar(
                     tabs: [
                       Tab(text: 'Needs'),
@@ -249,21 +289,9 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
                 ),
                 body: TabBarView(
                   children: [
-                    CategoryListView(
-                      type: 'Needs',
-                      expenses: savedBudgetSummary!['expenses'] ?? {},
-                      categories: getCategories('Needs'),
-                    ),
-                    CategoryListView(
-                      type: 'Wants',
-                      expenses: savedBudgetSummary!['expenses'] ?? {},
-                      categories: getCategories('Wants'),
-                    ),
-                    CategoryListView(
-                      type: 'Savings',
-                      expenses: savedBudgetSummary!['expenses'] ?? {},
-                      categories: getCategories('Savings'),
-                    ),
+                    _buildCategoryList(savedBudgetSummary!['Needs'], 'Needs'),
+                    _buildCategoryList(savedBudgetSummary!['Wants'], 'Wants'),
+                    _buildCategoryList(savedBudgetSummary!['Savings'], 'Savings'),
                   ],
                 ),
               ),
@@ -271,86 +299,33 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
           ),
         ],
       );
-    } else if (savedEnvelopes.isNotEmpty) {
-      // Display saved envelopes if available
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // Number of columns
-            crossAxisSpacing: 10.0,
-            mainAxisSpacing: 8.0,
-          ),
-          itemCount: savedEnvelopes.length,
-          itemBuilder: (context, index) {
-            final envelope = savedEnvelopes[index];
-            return Card(
-              color: Color(envelope.category.color),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      envelope.category.name,
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Allocated: ₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    Text(
-                      'Remaining: ₱${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
     } else {
       // Display original budgeting technique buttons if no saved data is available
       return _buildBudgetTechniqueSelection();
     }
   }
 
-  // Method to get categories based on the type (Needs, Wants, Savings)
-  List<Map<String, String>> getCategories(String type) {
-    switch (type) {
-      case 'Needs':
-        return [
-          {'icon': 'assets/Education.png', 'name': 'Education', 'id': '011'},
-          {'icon': 'assets/Tuition Fees.png', 'name': 'Tuition Fees', 'id': '012'},
-          {'icon': 'assets/School Supplies.png', 'name': 'School Supplies', 'id': '013'},
-          {'icon': 'assets/Public Transpo.png', 'name': 'Public Transpo', 'id': '015'},
-          {'icon': 'assets/House.png', 'name': 'House', 'id': '017'},
-          {'icon': 'assets/Utilities.png', 'name': 'Utilities', 'id': '018'},
-          {'icon': 'assets/Groceries.png', 'name': 'Groceries', 'id': '023'},
-          {'icon': 'assets/Meals.png', 'name': 'Meals', 'id': '026'},
-          {'icon': 'assets/Medical.png', 'name': 'Medical', 'id': '038'},
-          {'icon': 'assets/Insurance.png', 'name': 'Insurance', 'id': '039'},
-        ];
-      case 'Wants':
-        return [
-          {'icon': 'assets/Dining.png', 'name': 'Dining', 'id': '005'},
-          {'icon': 'assets/Travel.png', 'name': 'Travel', 'id': '007'},
-          {'icon': 'assets/Shopping.png', 'name': 'Shopping', 'id': '008'},
-          {'icon': 'assets/Personal Care.png', 'name': 'Personal Care', 'id': '014'},
-        ];
-      case 'Savings':
-        return [
-          {'icon': 'assets/Savings.png', 'name': 'Savings', 'id': '041'},
-        ];
-      default:
-        return [];
+  Widget _buildCategoryList(Map<String, dynamic>? categories, String tabName) { //needs wants savings
+    if (categories == null || categories.isEmpty) {
+      return Center(child: Text('No $tabName categories available.'));
     }
+    return ListView.builder(
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories.entries.elementAt(index).value;
+        return ListTile(
+          leading: Image.asset(category['icon'], width: 24.0, height: 24.0),
+          title: Text(category['name']),
+          trailing: Text('₱${category['amount'].toStringAsFixed(2)}'),
+        );
+      },
+    );
   }
 
-  // Method to create buttons for budgeting techniques
+
+
+
+
   Widget _buildBudgetTechniqueButton(String title, String description, VoidCallback onPressed) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
