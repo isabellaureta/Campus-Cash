@@ -38,9 +38,6 @@ class ExpenseEntity {
   }
 }
 
-
-
-
 class IncomeEntity {
   String incomeId;
   Category2 category2;
