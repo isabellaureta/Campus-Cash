@@ -55,16 +55,65 @@ class FirebaseExpenseRepo implements ExpenseRepository {
           .doc(updatedExpense.expenseId)
           .set(updatedExpense.toEntity().toDocument());
 
-      // Update the remaining budget
-      await _updateRemainingBudget(user.uid, updatedExpense.amount);
-
-      // Make sure the category budget is updated
+      // Deduct the expense amount from the category budget
       String categoryType = _determineCategoryType(expense.category.categoryId);
-      await _updateCategoryBudget(user.uid, expense.category.categoryId, categoryType, updatedExpense.amount);
+      await _deductExpenseFromCategory(user.uid, expense.category.categoryId, categoryType, updatedExpense.amount);
+
+      // Track total deductions made for the category in Firestore
+      await _updateTotalDeductions(user.uid, categoryType, updatedExpense.amount);
 
       log('Expense created and budget updated successfully.');
     } catch (e) {
       log('Failed to create expense: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  Future<void> _deductExpenseFromCategory(String userId, String categoryId, String categoryType, int expenseAmount) async {
+    try {
+      DocumentReference budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
+
+      DocumentSnapshot categoryDoc = await budgetDocRef.collection(categoryType).doc(categoryId).get();
+
+      if (categoryDoc.exists) {
+        Map<String, dynamic> categoryData = categoryDoc.data() as Map<String, dynamic>;
+        double currentAmount = categoryData['amount'] ?? 0.0;
+
+        double updatedAmount = currentAmount - expenseAmount;
+        if (updatedAmount < 0) updatedAmount = 0; // Ensure it doesn't go negative
+
+        await budgetDocRef.collection(categoryType).doc(categoryId).update({
+          'amount': updatedAmount,
+        });
+
+        log('Category budget updated successfully for $categoryId.');
+      } else {
+        throw Exception('Category document not found.');
+      }
+    } catch (e) {
+      log('Failed to update budget for category $categoryId: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  Future<void> _updateTotalDeductions(String userId, String categoryType, int expenseAmount) async {
+    try {
+      final budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
+
+      // Get the document for total deductions
+      DocumentSnapshot totalDeductionsDoc = await budgetDocRef.collection('TotalDeductions').doc(categoryType).get();
+
+      double currentDeductions = totalDeductionsDoc.exists ? totalDeductionsDoc['totalDeductions'] ?? 0.0 : 0.0;
+      double updatedDeductions = currentDeductions + expenseAmount;
+
+      // Update or create the total deductions document for this category
+      await budgetDocRef.collection('TotalDeductions').doc(categoryType).set({
+        'totalDeductions': updatedDeductions,
+      });
+
+      log('Total deductions updated for $categoryType.');
+    } catch (e) {
+      log('Failed to update total deductions for $categoryType: ${e.toString()}');
       rethrow;
     }
   }

@@ -28,25 +28,38 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final budgetSnapshot = await userDocRef.get();
     final budgetData = budgetSnapshot.data() ?? {};
 
-    // Fetch Needs categories
+    // Fetch Needs, Wants, and Savings categories
     final needsSnapshot = await userDocRef.collection('Needs').get();
     final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Fetch Wants categories
     final wantsSnapshot = await userDocRef.collection('Wants').get();
     final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Fetch Savings categories
     final savingsSnapshot = await userDocRef.collection('Savings').get();
     final savingsCategories = savingsSnapshot.docs.map((doc) => doc.data()).toList();
+
+    // Fetch total deductions from Firestore
+    double totalDeductions = 0;
+    final totalNeedsDeductions = await _fetchTotalDeductions(userDocRef, 'Needs');
+    final totalWantsDeductions = await _fetchTotalDeductions(userDocRef, 'Wants');
+    final totalSavingsDeductions = await _fetchTotalDeductions(userDocRef, 'Savings');
+
+    totalDeductions = totalNeedsDeductions + totalWantsDeductions + totalSavingsDeductions;
 
     return {
       'budgetData': budgetData,
       'needsCategories': needsCategories,
       'wantsCategories': wantsCategories,
       'savingsCategories': savingsCategories,
+      'totalDeductions': totalDeductions,  // Include total deductions
     };
   }
+
+  Future<double> _fetchTotalDeductions(DocumentReference userDocRef, String categoryType) async {
+    final totalDeductionsDoc = await userDocRef.collection('TotalDeductions').doc(categoryType).get();
+    return totalDeductionsDoc.exists ? totalDeductionsDoc['totalDeductions'] ?? 0.0 : 0.0;
+  }
+
 
   // Widget to display the category list
   Widget _buildCategoryList(List<dynamic> categories) {
@@ -161,29 +174,28 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     );
   }
 
+  Future<double> _fetchTotalExpenses() async {
+    double totalExpenses = 0.0;
+    try {
+      final expenseSnapshot = await FirebaseFirestore.instance
+          .collection('expenses')
+          .where('userId', isEqualTo: widget.userId)
+          .get();
+
+      for (var doc in expenseSnapshot.docs) {
+        totalExpenses += (doc['amount'] as num).toDouble();
+      }
+    } catch (e) {
+      print('Error fetching total expenses: $e');
+    }
+    return totalExpenses;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Budget Summary'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') {
-                _confirmDelete(); // Show confirmation dialog to delete the budget
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete Budget', style: TextStyle(color: Colors.red)),
-                ),
-              ];
-            },
-            icon: Icon(Icons.settings), // Settings icon for menu options
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -205,14 +217,10 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           }
 
           final budgetData = snapshot.data!['budgetData'];
-          final needsCategories = snapshot.data!['needsCategories'];
-          final wantsCategories = snapshot.data!['wantsCategories'];
-          final savingsCategories = snapshot.data!['savingsCategories'];
-
           final totalBudget = budgetData['totalBudget'] ?? 0.0;
-          final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
-          final remainingBudget = budgetData['remainingBudget'] ?? 0.0;
           final frequency = budgetData['frequency'] ?? 'N/A';
+          final totalDeductions = snapshot.data!['totalDeductions'] ?? 0.0;  // Total expenses made
+          final remainingBudget = totalBudget - totalDeductions;  // Remaining budget
 
           return Column(
             children: [
@@ -229,15 +237,18 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                       'Frequency: $frequency',
                       style: TextStyle(fontSize: 16),
                     ),
+                    SizedBox(height: 8.0),
+                    // Display total expenses made
                     Text(
-                      'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
+                      'Total Expenses Made: ₱${totalDeductions.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
+                    SizedBox(height: 8.0),
+                    // Display remaining budget
                     Text(
                       'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
-                    SizedBox(height: 16.0),
                   ],
                 ),
               ),
@@ -245,9 +256,9 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildTabContent('Needs', needsCategories),
-                    _buildTabContent('Wants', wantsCategories),
-                    _buildTabContent('Savings', savingsCategories),
+                    _buildTabContent('Needs', snapshot.data!['needsCategories']),
+                    _buildTabContent('Wants', snapshot.data!['wantsCategories']),
+                    _buildTabContent('Savings', snapshot.data!['savingsCategories']),
                   ],
                 ),
               ),
