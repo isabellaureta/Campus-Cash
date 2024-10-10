@@ -13,9 +13,9 @@ class Envelope {
   Envelope({
     required this.category,
     required this.allocatedBudget,
-  }) : remainingBudget = allocatedBudget;
+    required this.remainingBudget,
+  });
 }
-
 
 // Define the allowed category names
 const List<String> allowedCategoryNames = [
@@ -228,27 +228,45 @@ class _AllocationPageState extends State<AllocationPage> {
 
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(userId);
 
+      Map<String, double> validAllocations = {};
       for (var entry in allocations.entries) {
-        await userDocRef.collection('envelopes').add({
-          'categoryName': entry.key,
-          'allocatedAmount': double.tryParse(entry.value) ?? 0.0,
-        });
+        if (entry.value.isNotEmpty && double.tryParse(entry.value) != null) {
+          // Find the category by name
+          Category? category = predefinedCategories.firstWhere((cat) => cat.name == entry.key);
+
+          // Parse the allocated amount
+          double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
+
+          // Remaining budget is the same as allocated budget initially
+          double remainingBudget = allocatedAmount;
+
+          // Save to Firestore
+          await userDocRef.collection('envelopes').doc(category.categoryId).set({
+            'categoryName': category.name,
+            'categoryId': category.categoryId,
+            'allocatedAmount': allocatedAmount,
+            'remainingBudget': remainingBudget,
+          });
+
+          // Include only categories with valid allocation amounts
+          validAllocations[category.name] = allocatedAmount;
+        }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Allocations saved successfully!')),
       );
 
+      // Navigate to the EnvelopeBudgetingPage with filtered allocations
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => EnvelopeBudgetingPage(
-            allocations: allocations.map((key, value) => MapEntry(key, double.tryParse(value) ?? 0.0)),
+            allocations: validAllocations,
           ),
         ),
       );
     } catch (e) {
-      // Show an error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save allocations: $e')),
       );

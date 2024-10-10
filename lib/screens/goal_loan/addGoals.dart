@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -10,7 +11,7 @@ class AddGoalPage extends StatefulWidget {
 }
 
 class _AddGoalPageState extends State<AddGoalPage> {
-  String _selectedIcon = 'default_icon';
+  IconData _selectedIcon = FontAwesomeIcons.user; // Default icon as an IconData
   Color _selectedColor = Colors.green;
   double _goalAmount = 0.0;
   double _savedAmount = 0.0;
@@ -25,7 +26,7 @@ class _AddGoalPageState extends State<AddGoalPage> {
         return Container(
           height: 200,
           child: GridView.builder(
-            itemCount: myCategoriesIcons.length,
+            itemCount: icons.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
             ),
@@ -33,7 +34,7 @@ class _AddGoalPageState extends State<AddGoalPage> {
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedIcon = myCategoriesIcons[index];
+                    _selectedIcon = icons[index]; // Directly store the selected IconData
                   });
                   Navigator.pop(context);
                 },
@@ -43,15 +44,13 @@ class _AddGoalPageState extends State<AddGoalPage> {
                   decoration: BoxDecoration(
                     border: Border.all(
                       width: 3,
-                      color: _selectedIcon == myCategoriesIcons[index]
+                      color: _selectedIcon == icons[index]
                           ? Colors.green
                           : Colors.grey,
                     ),
                     borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: AssetImage('assets/${myCategoriesIcons[index]}.png'),
-                    ),
                   ),
+                  child: Icon(icons[index], size: 30, color: _selectedColor), // Display the Font Awesome icon
                 ),
               );
             },
@@ -60,6 +59,7 @@ class _AddGoalPageState extends State<AddGoalPage> {
       },
     );
   }
+
 
   void _chooseColor() {
     showDialog(
@@ -121,10 +121,10 @@ class _AddGoalPageState extends State<AddGoalPage> {
   }
 
   Future<void> _saveGoal() async {
-
     await FirebaseFirestore.instance.collection('goals').add({
       'goalName': _goalNameController.text,
-      'icon': _selectedIcon,
+      'iconCodePoint': _selectedIcon.codePoint, // Store codePoint of the icon
+      'iconFontFamily': _selectedIcon.fontFamily, // Store fontFamily of the icon
       'color': _selectedColor.value.toRadixString(16),
       'goalAmount': _goalAmount,
       'savedAmount': _savedAmount,
@@ -136,14 +136,19 @@ class _AddGoalPageState extends State<AddGoalPage> {
 
 
 
-  final List<String> myCategoriesIcons = [
-    'clothes_icon',
-    'food',
-    'home',
-    'pet',
-    'tech',
-    'travel',
-    // Add more icon file names here
+
+
+  final List<IconData> icons = [
+    FontAwesomeIcons.car,
+    FontAwesomeIcons.home,
+    FontAwesomeIcons.bicycle,
+    FontAwesomeIcons.camera,
+    FontAwesomeIcons.coffee,
+    FontAwesomeIcons.heart,
+    FontAwesomeIcons.user,
+    FontAwesomeIcons.shoppingCart,
+    FontAwesomeIcons.wallet,
+    FontAwesomeIcons.umbrella,
   ];
 
   @override
@@ -189,25 +194,16 @@ class _AddGoalPageState extends State<AddGoalPage> {
                   child: CircleAvatar(
                     radius: 30,
                     backgroundColor: _selectedColor,
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          width: 3,
-                          color: Colors.grey,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: AssetImage('assets/$_selectedIcon.png'),
-                        ),
-                      ),
+                    child: Icon(
+                      _selectedIcon, // Directly use IconData, no need for int.parse
+                      size: 30,
+                      color: Colors.white, // Adjust the icon color if needed
                     ),
                   ),
                 ),
                 SizedBox(width: 20),
                 IconButton(
-                  icon: Icon(Icons.color_lens, color: _selectedColor),
+                  icon: Icon(Icons.color_lens, color: _selectedColor), // Color picker button
                   onPressed: _chooseColor,
                 ),
               ],

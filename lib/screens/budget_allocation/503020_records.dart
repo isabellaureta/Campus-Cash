@@ -28,13 +28,16 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final budgetSnapshot = await userDocRef.get();
     final budgetData = budgetSnapshot.data() ?? {};
 
+    // Fetch Needs categories
     // Fetch Needs, Wants, and Savings categories
     final needsSnapshot = await userDocRef.collection('Needs').get();
     final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
 
+    // Fetch Wants categories
     final wantsSnapshot = await userDocRef.collection('Wants').get();
     final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
 
+    // Fetch Savings categories
     final savingsSnapshot = await userDocRef.collection('Savings').get();
     final savingsCategories = savingsSnapshot.docs.map((doc) => doc.data()).toList();
 
@@ -196,6 +199,24 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     return Scaffold(
       appBar: AppBar(
         title: Text('Budget Summary'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDelete(); // Show confirmation dialog to delete the budget
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete Budget', style: TextStyle(color: Colors.red)),
+                ),
+              ];
+            },
+            icon: Icon(Icons.settings), // Settings icon for menu options
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -217,10 +238,15 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           }
 
           final budgetData = snapshot.data!['budgetData'];
+          final needsCategories = snapshot.data!['needsCategories'];
+          final wantsCategories = snapshot.data!['wantsCategories'];
+          final savingsCategories = snapshot.data!['savingsCategories'];
+
           final totalBudget = budgetData['totalBudget'] ?? 0.0;
+          final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
+          final remainingBudget = totalBudget - totalExpenses;  // Update remainingBudget using totalExpenses
           final frequency = budgetData['frequency'] ?? 'N/A';
           final totalDeductions = snapshot.data!['totalDeductions'] ?? 0.0;  // Total expenses made
-          final remainingBudget = totalBudget - totalDeductions;  // Remaining budget
 
           return Column(
             children: [
@@ -240,7 +266,8 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                     SizedBox(height: 8.0),
                     // Display total expenses made
                     Text(
-                      'Total Expenses Made: ₱${totalDeductions.toStringAsFixed(2)}',
+                      'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
+                      semanticsLabel: 'Total Expenses Made: ₱${totalDeductions.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
@@ -249,6 +276,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                       'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
+                    SizedBox(height: 16.0),
                   ],
                 ),
               ),
@@ -256,6 +284,9 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                 child: TabBarView(
                   controller: _tabController,
                   children: [
+                    _buildTabContent('Needs', needsCategories),
+                    _buildTabContent('Wants', wantsCategories),
+                    _buildTabContent('Savings', savingsCategories),
                     _buildTabContent('Needs', snapshot.data!['needsCategories']),
                     _buildTabContent('Wants', snapshot.data!['wantsCategories']),
                     _buildTabContent('Savings', snapshot.data!['savingsCategories']),
@@ -269,3 +300,4 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     );
   }
 }
+

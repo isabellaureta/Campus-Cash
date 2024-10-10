@@ -4,6 +4,9 @@ import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 
 import '503020_budgeting_page.dart';
 import '503020_records.dart';
@@ -300,8 +303,8 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
         ],
       );
     } else {
-      // Display original budgeting technique buttons if no saved data is available
-      return _buildBudgetTechniqueSelection();
+      // Pass context to _buildBudgetTechniqueSelection
+      return _buildBudgetTechniqueSelection(context);
     }
   }
 
@@ -322,107 +325,102 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     );
   }
 
-
-
-
-
-  Widget _buildBudgetTechniqueButton(String title, String description, VoidCallback onPressed) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          textStyle: TextStyle(fontSize: 18),
-          minimumSize: Size(double.infinity, 60),
+  Widget _buildBudgetTechniqueButton(String title, String description, String imagePath, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 350,
+        height: 140,
+        margin: EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [Colors.pink.shade50, Colors.blue.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.4),
+              blurRadius: 8,
+              offset: Offset(2, 4),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+
+        child: Row(
           children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
-            Text(description, style: TextStyle(fontSize: 14)),
+            Image.asset(imagePath, width: 100, height: 100), // Use Image.asset instead of Lottie.asset
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.agdasima(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: GoogleFonts.nunito(
+                      fontSize: 14,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.grey),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn().slideX(begin: -0.1, delay: 100.ms, duration: 500.ms);
   }
 
-  Widget _buildBudgetTechniqueSelection() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+  Widget _buildBudgetTechniqueSelection(BuildContext context) {
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Select a Budgeting Technique:',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Center(
+            child: _buildBudgetTechniqueButton(
+              '50/30/20 Budgeting',
+              'Allocate 50% to needs, 30% to wants, and 20% to savings.',
+              'assets/503020.png',
+                  () async {
+                // Your existing code for navigation
+              },
+            ),
           ),
-          SizedBox(height: 16),
-          _buildBudgetTechniqueButton(
-            '50/30/20 Budgeting',
-            'Allocate 50% to needs, 30% to wants, and 20% to savings.',
-                () async {
-              final userId = _currentUser!.uid;
-              final docSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).get();
-
-              if (docSnapshot.exists) {
-                final data = docSnapshot.data() as Map<String, dynamic>;
-                final totalBudget = data['totalBudget'] ?? 0.0;
-                final totalExpenses = data['totalExpenses'] ?? 0.0;
-                final remainingBudget = totalBudget - totalExpenses;
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BudgetSummaryPage(
-                      totalBudget: totalBudget,
-                      totalExpenses: totalExpenses,
-                      remainingBudget: remainingBudget,
-                      expenses: {}, // Fetch expenses from Firestore
-                      userId: userId,
-                    ),
-                  ),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BudgetInputPage(userId: userId),
-                  ),
-                );
-              }
-            },
+          Center(
+            child: _buildBudgetTechniqueButton(
+              'Envelope Budgeting',
+              'Allocate money into different envelopes for various expenses.',
+              'assets/envelope.png',
+                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => IncomeInputPage())),
+            ),
           ),
-          _buildBudgetTechniqueButton(
-            'Envelope Budgeting',
-            'Allocate money into different envelopes for various expenses.',
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => IncomeInputPage()),
-              );
-            },
+          Center(
+            child: _buildBudgetTechniqueButton(
+              'Pay-Yourself-First',
+              'Prioritize savings and investments before other expenses.',
+              'assets/payyourselffirst.png',
+                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => PayYourselfFirstPage())),
+            ),
           ),
-          _buildBudgetTechniqueButton(
-            'Pay-Yourself-First',
-            'Prioritize savings and investments before other expenses.',
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PayYourselfFirstPage()),
-              );
-            },
-          ),
-          _buildBudgetTechniqueButton(
-            'Priority-Based Budgeting',
-            'Allocate funds based on priority expenses.',
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage()),
-              );
-            },
+          Center(
+            child: _buildBudgetTechniqueButton(
+              'Priority-Based Budgeting',
+              'Allocate funds based on priority expenses.',
+              'assets/prioritybased.png',
+                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage())),
+            ),
           ),
         ],
       ),

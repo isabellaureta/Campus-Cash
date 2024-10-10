@@ -33,6 +33,9 @@ dependencies:
   google_sign_in: ^6.2.1
   flutter_local_notifications: ^17.2.1+2
   firebase_app_check: ^0.3.0+1
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.2
+  google_fonts: ^6.2.1
 
 
 
@@ -41,7 +44,7 @@ dependencies:
   dropdown_button2: ^2.0.0
   firebase_database: ^11.0.1
   flutter_switch: ^0.3.2
-  fluttertoast: ^8.2.1
+  fluttertoast: ^8.2.8
   persistent_bottom_nav_bar: ^5.0.2
   provider: ^6.0.5
 

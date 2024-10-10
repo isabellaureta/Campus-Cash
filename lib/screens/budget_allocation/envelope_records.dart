@@ -14,31 +14,59 @@ class EnvelopeBudgetingPage extends StatefulWidget {
 }
 
 class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
-  bool isSaving = false; // To track the saving state
+  bool isSaving = false;
 
-  // Function to delete the user's envelope budgeting data from Firestore
+  // New Map to store the actual remaining budget fetched from Firestore
+  Map<String, double> remainingBudgets = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRemainingBudgets();
+  }
+
+  Future<void> _fetchRemainingBudgets() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Fetch the remaining budget for each category from Firestore
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid);
+      final envelopeDocs = await userDocRef.collection('envelopes').get();
+
+      Map<String, double> fetchedBudgets = {};
+      for (var doc in envelopeDocs.docs) {
+        var data = doc.data();
+        fetchedBudgets[data['categoryName']] = data['remainingBudget']?.toDouble() ?? 0.0;
+      }
+
+      // Update state with fetched budgets
+      setState(() {
+        remainingBudgets = fetchedBudgets;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch remaining budgets: $e')),
+      );
+    }
+  }
+
   Future<void> _deleteEnvelopeData() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Reference to the user's document in Firestore under 'envelopeAllocations'
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid);
-
-      // Delete the 'envelopes' subcollection under the user's document
       final envelopeCollection = await userDocRef.collection('envelopes').get();
       for (var doc in envelopeCollection.docs) {
         await doc.reference.delete();
       }
-
-      // Delete the main document in 'envelopeAllocations' for this user (optional)
       await userDocRef.delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Envelope budgeting data deleted successfully')),
       );
 
-      // Optionally, navigate the user back or to a different page after deletion
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,7 +75,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     }
   }
 
-  // Show a confirmation dialog before deleting
   Future<void> _confirmDelete() async {
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -68,7 +95,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     );
 
     if (shouldDelete == true) {
-      await _deleteEnvelopeData(); // Proceed with deletion if confirmed
+      await _deleteEnvelopeData();
     }
   }
 
@@ -76,7 +103,9 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   Widget build(BuildContext context) {
     final List<Envelope> envelopes = filteredCategories.map((category) {
       String allocatedAmount = widget.allocations[category.name]?.toString() ?? '0.0';
-      return Envelope(category: category, allocatedBudget: allocatedAmount);
+      // Use fetched remaining budget if available, otherwise fallback to allocatedBudget
+      String remainingAmount = remainingBudgets[category.name]?.toStringAsFixed(2) ?? allocatedAmount;
+      return Envelope(category: category, allocatedBudget: allocatedAmount, remainingBudget: remainingAmount);
     }).toList();
 
     return Scaffold(
@@ -84,8 +113,8 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         title: Text('Envelope Budgeting'),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings), // Settings icon
-            onPressed: _confirmDelete, // Show delete confirmation dialog
+            icon: Icon(Icons.settings),
+            onPressed: _confirmDelete,
           ),
         ],
       ),
@@ -93,10 +122,10 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // Number of columns
+            crossAxisCount: 2,
             crossAxisSpacing: 10.0,
             mainAxisSpacing: 8.0,
-            childAspectRatio: 1, // Adjusted childAspectRatio to make cards larger
+            childAspectRatio: 1,
           ),
           itemCount: envelopes.length,
           itemBuilder: (context, index) {
@@ -104,7 +133,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
             return Card(
               color: Color(envelope.category.color),
               child: Padding(
-                padding: const EdgeInsets.all(12.0), // Increased padding inside the Card
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,

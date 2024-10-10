@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
@@ -208,19 +210,51 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       _expenses[categoryId] = amount;
       _modifiedCategories[categoryId] = true;
 
+      // Update individual category expenses
       _needsExpenses = _calculateCategoryExpenses(needsCategoryIds);
       _wantsExpenses = _calculateCategoryExpenses(wantsCategoryIds);
       _savingsExpenses = _calculateCategoryExpenses(savingsCategoryIds);
 
-      // Adjust total budget and category budget in Firestore after expense
+      // Update the Firestore document for the category
       _adjustTotalBudgetAfterExpense(tabName, parsedAmount);
 
-      // Determine which tab/category this belongs to and pass categoryType
-      String categoryType = (needsCategoryIds.contains(categoryId)) ? 'Needs' :
-      (wantsCategoryIds.contains(categoryId)) ? 'Wants' : 'Savings';
+      // If the categoryId exists in predefined sets, update the corresponding Firestore collection
+      String categoryType = (needsCategoryIds.contains(categoryId))
+          ? 'Needs'
+          : (wantsCategoryIds.contains(categoryId))
+          ? 'Wants'
+          : (savingsCategoryIds.contains(categoryId))
+          ? 'Savings'
+          : 'Custom';  // Handle non-predefined categories
 
-      _updateCategoryBudget(widget.userId, categoryType, categoryId, parsedAmount.toInt());
+      if (categoryType == 'Custom') {
+        // Handle custom category creation or error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Creating expense for custom category: $categoryId')),
+        );
+        // Optionally, save custom categories to a 'CustomCategories' collection
+        _saveCustomCategoryToFirestore(widget.userId, categoryId, parsedAmount);
+      } else {
+        _updateCategoryBudget(widget.userId, categoryType, categoryId, parsedAmount.toInt());
+      }
     });
+  }
+
+  Future<void> _saveCustomCategoryToFirestore(String userId, String categoryId, double amount) async {
+    try {
+      final userDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
+
+      // Create or update a custom category document
+      await userDocRef.collection('CustomCategories').doc(categoryId).set({
+        'categoryId': categoryId,
+        'amount': amount,
+      });
+
+      log('Custom category created successfully for $categoryId');
+    } catch (e) {
+      print('Failed to save custom category: ${e.toString()}');
+      rethrow;
+    }
   }
 
   Future<void> _saveBudgetToFirestore() async {
@@ -233,7 +267,7 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       'userId': userId,
       'totalBudget': widget.totalBudget,
       'frequency': widget.frequency,
-      'totalExpenses': _totalExpenses,
+      'totalExpenses': 0.0,  // Initialize to 0
       'remainingBudget': widget.totalBudget - _totalExpenses,
     });
 
@@ -322,21 +356,20 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
 
   Future<void> _updateCategoryBudget(String userId, String categoryType, String categoryId, int expenseAmount) async {
     try {
-      // Get the document for the 503020 budget
-      DocumentReference budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
+      final budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
 
-      // Fetch the specific category document within the subcollection (e.g., Needs, Wants, or Savings)
+      // Fetch the specific category document in Firestore
       DocumentSnapshot categoryDoc = await budgetDocRef.collection(categoryType).doc(categoryId).get();
 
       if (categoryDoc.exists) {
         Map<String, dynamic> categoryData = categoryDoc.data() as Map<String, dynamic>;
         double currentAmount = categoryData['amount'] ?? 0.0;
 
-        // Subtract the expense from the category's amount
+        // Deduct the expense amount from the category's amount
         double updatedAmount = currentAmount - expenseAmount;
-        if (updatedAmount < 0) updatedAmount = 0; // Ensure it doesn't go negative
+        if (updatedAmount < 0) updatedAmount = 0;  // Ensure it doesn't go negative
 
-        // Update the category document with the new amount
+        // Update Firestore with the new amount
         await budgetDocRef.collection(categoryType).doc(categoryId).update({
           'amount': updatedAmount,
         });

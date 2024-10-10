@@ -9,26 +9,7 @@ class CustomTabBarsPage extends StatefulWidget {
   State<CustomTabBarsPage> createState() => _CustomTabBarsPageState();
 }
 
-class _CustomTabBarsPageState extends State<CustomTabBarsPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final _tabs = const [
-    Tab(text: 'Goals'),
-    Tab(text: 'Loans'),
-  ];
-
-  @override
-  void initState() {
-    _tabController = TabController(length: 2, vsync: this);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _tabController.dispose();
-  }
-
+class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
   void _navigateToAddGoalPage() {
     Navigator.push(
       context,
@@ -49,37 +30,19 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
     }
   }
 
-
-  Widget _buildLoanCard(DocumentSnapshot document) {
-    Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-    bool isUtangSayo = data['type'] == 'utangSayo';
-
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.purple,
-          child: Text(data['name'][0]),
-        ),
-        title: Text(data['name']),
-        trailing: Text(
-          'PHP ${data['amount']}',
-          style: TextStyle(
-            color: isUtangSayo ? Colors.red : Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(isUtangSayo ? 'Receivable' : 'Payable'),
-      ),
-    );
-  }
-
   Widget _buildGoalCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-    double progress = data['goalAmount'] > 0
-        ? data['savedAmount'] / data['goalAmount']
-        : 0;
+
+    // Safely handle null values by providing default values
+    String goalName = data['goalName'] ?? 'Unnamed Goal';
+    int iconCodePoint = data['iconCodePoint'] ?? Icons.help_outline.codePoint; // Default icon in case of null
+    String fontFamily = data['iconFontFamily'] ?? 'MaterialIcons'; // Default font family if null
+    String color = data['color'] ?? 'ffffff'; // Default white color
+    double goalAmount = data['goalAmount']?.toDouble() ?? 0.0; // Default to 0.0
+    double savedAmount = data['savedAmount']?.toDouble() ?? 0.0; // Default to 0.0
+
+    // Calculate progress safely
+    double progress = goalAmount > 0 ? savedAmount / goalAmount : 0;
 
     return GestureDetector(
       onLongPress: () {
@@ -117,7 +80,7 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                data['goalName'],
+                goalName,
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
@@ -126,13 +89,15 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: CircleAvatar(
-                      backgroundColor: Color(int.parse('0xff${data['color']}')),
+                      backgroundColor: Color(int.parse('0xff$color')), // Convert color from Firestore
                       radius: 24,
-                      child: Image.asset(
-                        'assets/${data['icon']}.png',
-                        fit: BoxFit.contain,
-                        width: 30,
-                        height: 30,
+                      child: Icon(
+                        IconData(
+                          iconCodePoint, // Use default icon if null
+                          fontFamily: fontFamily, // Use default font family if null
+                        ),
+                        size: 30,
+                        color: Colors.white, // Set the icon color (adjust as needed)
                       ),
                     ),
                   ),
@@ -141,11 +106,11 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Goal: ₱${data['goalAmount'].toStringAsFixed(2)}',
+                        'Goal: ₱${goalAmount.toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 16),
                       ),
                       Text(
-                        'Saved: ₱${data['savedAmount'].toStringAsFixed(2)}',
+                        'Saved: ₱${savedAmount.toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 16),
                       ),
                     ],
@@ -171,57 +136,48 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage>
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Goals and Loans'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: _tabs,
-        ),
+        title: Text('Goals'),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToAddGoalPage,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    textStyle: TextStyle(fontSize: 18),
-                    minimumSize: Size(double.infinity, 50),
-                  ),
-                  child: Text('Add Goal'),
-                ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _navigateToAddGoalPage,
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                textStyle: TextStyle(fontSize: 18),
+                minimumSize: Size(double.infinity, 50),
               ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('goals').snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-
-                    final goals = snapshot.data!.docs;
-
-                    return ListView.builder(
-                      itemCount: goals.length,
-                      itemBuilder: (context, index) {
-                        return _buildGoalCard(goals[index]);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
+              child: Text('Add Goal'),
+            ),
           ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('goals').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-        ]
-      )
+                final goals = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: goals.length,
+                  itemBuilder: (context, index) {
+                    return _buildGoalCard(goals[index]);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
