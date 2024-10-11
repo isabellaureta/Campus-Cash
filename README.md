@@ -1,5 +1,5 @@
-**Campus Cash
-**Campus Cash is an ongoing project that aims to develop a cross-platform budgeting application specifically tailored for college students. Available on both iOS and Android, the app empowers students to effectively manage their finances with a comprehensive set of features designed to promote financial literacy and well-being.
+Campus Cash
+Campus Cash is an ongoing project that aims to develop a cross-platform budgeting application specifically tailored for college students. Available on both iOS and Android, the app empowers students to effectively manage their finances with a comprehensive set of features designed to promote financial literacy and well-being.
 
 Features:
 - Income & Expense Tracking: Easily add and categorize income sources and expenses for streamlined financial management.
