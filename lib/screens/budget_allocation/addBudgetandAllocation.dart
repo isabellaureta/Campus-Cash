@@ -390,28 +390,55 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
         children: [
           Center(
             child: _buildBudgetTechniqueButton(
-              '50/30/20 Budgeting',
-              'Allocate 50% to needs, 30% to wants, and 20% to savings.',
-              'assets/503020.png',
-                  () async {
-                // Your existing code for navigation
-              },
-            ),
+      '50/30/20 Budgeting',
+        'Allocate 50% to needs, 30% to wants, and 20% to savings.',
+        'assets/503020.png', // Path to the image asset
+
+            () async {
+          final userId = _currentUser!.uid;
+          final docSnapshot = await FirebaseFirestore.instance.collection('503020').doc(userId).get();
+          if (docSnapshot.exists) {
+            final data = docSnapshot.data() as Map<String, dynamic>;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BudgetSummaryPage(
+                  totalBudget: data['totalBudget'] ?? 0.0,
+                  totalExpenses: data['totalExpenses'] ?? 0.0,
+                  remainingBudget: (data['totalBudget'] ?? 0.0) - (data['totalExpenses'] ?? 0.0),
+                  expenses: {},
+                  userId: userId,
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => BudgetInputPage(userId: userId)),
+            );
+          }
+        },
+      ),
           ),
           Center(
             child: _buildBudgetTechniqueButton(
               'Envelope Budgeting',
               'Allocate money into different envelopes for various expenses.',
               'assets/envelope.png',
-                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => IncomeInputPage())),
+                  () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => IncomeInputPage()));
+              },
             ),
           ),
+
           Center(
             child: _buildBudgetTechniqueButton(
               'Pay-Yourself-First',
               'Prioritize savings and investments before other expenses.',
               'assets/payyourselffirst.png',
-                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => PayYourselfFirstPage())),
+                  () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => PayYourselfFirstPage()));
+              },
             ),
           ),
           Center(
@@ -419,7 +446,9 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               'Priority-Based Budgeting',
               'Allocate funds based on priority expenses.',
               'assets/prioritybased.png',
-                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage())),
+                  () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage()));
+              },
             ),
           ),
         ],
