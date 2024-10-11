@@ -10,6 +10,8 @@ Transaction History: Maintain a detailed transaction history to track all past e
 Goal Module: Define financial goals, such as savings targets or debt repayment, and track your progress toward achieving them.
 
 ![App Screenshot](images/461998960_1052930026079601_3113985016563050010_n.jpg)
+<img src="https://github.com/isabellaureta/Campus-Cash/blob/main/images/461998960_1052930026079601_3113985016563050010_n.jpg" alt="App Screenshot" width="300" />
+
 
 
 
