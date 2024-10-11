@@ -8,6 +8,11 @@ Budget Setup: Set up and adjust budgets based on different timeframes and financ
 Data Visualization: Access insightful data visualizations to better understand spending patterns and financial health.
 Transaction History: Maintain a detailed transaction history to track all past expenses and income.
 Goal Module: Define financial goals, such as savings targets or debt repayment, and track your progress toward achieving them.
+
+![App Screenshot](images/461998960_1052930026079601_3113985016563050010_n.jpg)
+
+
+
 Built With
 Flutter & Dart: For building the mobile application with a single codebase across iOS and Android platforms.
 Firebase: Utilized for backend services, including data storage, authentication, and real-time data syncing.
