@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'addGoals.dart';
+import 'addGoals.dart'; // Assuming this file contains your AddGoalPage class
 
 class CustomTabBarsPage extends StatefulWidget {
   const CustomTabBarsPage({super.key});
@@ -33,16 +33,12 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
   Widget _buildGoalCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
-    // Safely handle null values by providing default values
-    String goalName = data['goalName'] ?? 'Unnamed Goal';
-    int iconCodePoint = data['iconCodePoint'] ?? Icons.help_outline.codePoint; // Default icon in case of null
-    String fontFamily = data['iconFontFamily'] ?? 'MaterialIcons'; // Default font family if null
-    String color = data['color'] ?? 'ffffff'; // Default white color
-    double goalAmount = data['goalAmount']?.toDouble() ?? 0.0; // Default to 0.0
-    double savedAmount = data['savedAmount']?.toDouble() ?? 0.0; // Default to 0.0
+    // Safely handle null color
+    Color goalColor = Color(int.parse('0xff${data['color'] ?? 'ffffff'}')); // Default to white if null
 
-    // Calculate progress safely
-    double progress = goalAmount > 0 ? savedAmount / goalAmount : 0;
+    double progress = data['goalAmount'] > 0
+        ? data['savedAmount'] / data['goalAmount']
+        : 0;
 
     return GestureDetector(
       onLongPress: () {
@@ -80,37 +76,23 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                goalName,
+                data['goalName'] ?? 'Unnamed Goal', // Handle null goal name
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
               Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircleAvatar(
-                      backgroundColor: Color(int.parse('0xff$color')), // Convert color from Firestore
-                      radius: 24,
-                      child: Icon(
-                        IconData(
-                          iconCodePoint, // Use default icon if null
-                          fontFamily: fontFamily, // Use default font family if null
-                        ),
-                        size: 30,
-                        color: Colors.white, // Set the icon color (adjust as needed)
-                      ),
-                    ),
-                  ),
+
                   SizedBox(width: 20),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Goal: ₱${goalAmount.toStringAsFixed(2)}',
+                        'Goal: ₱${data['goalAmount']?.toStringAsFixed(2) ?? '0.00'}',
                         style: TextStyle(fontSize: 16),
                       ),
                       Text(
-                        'Saved: ₱${savedAmount.toStringAsFixed(2)}',
+                        'Saved: ₱${data['savedAmount']?.toStringAsFixed(2) ?? '0.00'}',
                         style: TextStyle(fontSize: 16),
                       ),
                     ],
@@ -135,7 +117,6 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {

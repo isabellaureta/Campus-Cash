@@ -1,7 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -11,55 +9,12 @@ class AddGoalPage extends StatefulWidget {
 }
 
 class _AddGoalPageState extends State<AddGoalPage> {
-  IconData _selectedIcon = FontAwesomeIcons.user; // Default icon as an IconData
   Color _selectedColor = Colors.green;
   double _goalAmount = 0.0;
   double _savedAmount = 0.0;
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   final TextEditingController _goalNameController = TextEditingController();
-
-  void _chooseIcon() {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          height: 200,
-          child: GridView.builder(
-            itemCount: icons.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-            ),
-            itemBuilder: (BuildContext context, int index) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedIcon = icons[index]; // Directly store the selected IconData
-                  });
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      width: 3,
-                      color: _selectedIcon == icons[index]
-                          ? Colors.green
-                          : Colors.grey,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icons[index], size: 30, color: _selectedColor), // Display the Font Awesome icon
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
 
   void _chooseColor() {
     showDialog(
@@ -123,9 +78,7 @@ class _AddGoalPageState extends State<AddGoalPage> {
   Future<void> _saveGoal() async {
     await FirebaseFirestore.instance.collection('goals').add({
       'goalName': _goalNameController.text,
-      'iconCodePoint': _selectedIcon.codePoint, // Store codePoint of the icon
-      'iconFontFamily': _selectedIcon.fontFamily, // Store fontFamily of the icon
-      'color': _selectedColor.value.toRadixString(16),
+      'color': _selectedColor.value.toRadixString(16), // Store color
       'goalAmount': _goalAmount,
       'savedAmount': _savedAmount,
       'startDate': _startDate,
@@ -133,23 +86,6 @@ class _AddGoalPageState extends State<AddGoalPage> {
     });
     Navigator.pop(context);
   }
-
-
-
-
-
-  final List<IconData> icons = [
-    FontAwesomeIcons.car,
-    FontAwesomeIcons.home,
-    FontAwesomeIcons.bicycle,
-    FontAwesomeIcons.camera,
-    FontAwesomeIcons.coffee,
-    FontAwesomeIcons.heart,
-    FontAwesomeIcons.user,
-    FontAwesomeIcons.shoppingCart,
-    FontAwesomeIcons.wallet,
-    FontAwesomeIcons.umbrella,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -164,24 +100,24 @@ class _AddGoalPageState extends State<AddGoalPage> {
           children: [
             SizedBox(height: 20),
             Container(
-              height: 70, // Adjust the height as needed
+              height: 70,
               child: TextField(
                 controller: _goalNameController,
                 decoration: InputDecoration(
                   labelText: 'Goal Name',
                   border: OutlineInputBorder(
-                    borderSide: BorderSide(width: 3.0), // Set the width of the border
+                    borderSide: BorderSide(width: 3.0),
                     borderRadius: BorderRadius.circular(12.0),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(width: 3.0, color: Colors.grey), // Set the width and color of the border when enabled
+                    borderSide: BorderSide(width: 3.0, color: Colors.grey),
                     borderRadius: BorderRadius.circular(12.0),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(width: 3.0, color: Colors.blue), // Set the width and color of the border when focused
+                    borderSide: BorderSide(width: 3.0, color: Colors.blue),
                     borderRadius: BorderRadius.circular(12.0),
                   ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0), // Adjust the vertical padding
+                  contentPadding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
                   labelStyle: TextStyle(fontSize: 18),
                 ),
               ),
@@ -189,17 +125,9 @@ class _AddGoalPageState extends State<AddGoalPage> {
             SizedBox(height: 20),
             Row(
               children: [
-                GestureDetector(
-                  onTap: _chooseIcon,
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: _selectedColor,
-                    child: Icon(
-                      _selectedIcon, // Directly use IconData, no need for int.parse
-                      size: 30,
-                      color: Colors.white, // Adjust the icon color if needed
-                    ),
-                  ),
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: _selectedColor, // Show selected color
                 ),
                 SizedBox(width: 20),
                 IconButton(

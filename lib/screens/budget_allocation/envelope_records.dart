@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'addBudgetandAllocation.dart';
 import 'envelope_budgeting_page.dart';
 
 class EnvelopeBudgetingPage extends StatefulWidget {
@@ -66,6 +67,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Envelope budgeting data deleted successfully')),
       );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => AddBudget(userId: '',)));
 
       Navigator.pop(context);
     } catch (e) {

@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import 'PayYourselfFirstRecords.dart';
 
 class PayYourselfFirstPage extends StatefulWidget {
   @override
@@ -37,26 +39,35 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   };
 
   void calculateSavingsAndExcessMoney() {
-    double income = double.parse(incomeController.text);
-    double percent = double.parse(percentController.text);
+    try {
+      // Parse and validate inputs
+      final income = double.parse(incomeController.text);
+      final percent = double.parse(percentController.text);
+      double savings = 0.0;
 
-    if (incomeType == 'Weekly') {
-      income *= 4; // Convert weekly income to monthly
-    }
-
-    double savings = income * (percent / 100);
-
-    setState(() {
-      totalSavings = savings;
-      excessMoney = income - savings;
-      showResult = true;
-
-      // Initialize TextEditingControllers for each category
-      for (var category in selectedCategories) {
-        _controllers[category.name] = TextEditingController();
+      // Calculate savings based on income type
+      if (incomeType == 'Weekly') {
+        savings = income * (percent / 100);
+      } else if (incomeType == 'Every 15th of the Month') {
+        savings = income * (percent / 100);
+      } else {
+        savings = income * (percent / 100);
       }
-    });
+
+      setState(() {
+        totalSavings = savings;
+        excessMoney = income - savings;
+        showResult = true;
+      });
+
+    } catch (e) {
+      // Show an error if parsing fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter valid numeric values for income and percent')),
+      );
+    }
   }
+
 
   void _allocate(String category, String amount) {
     setState(() {
@@ -66,21 +77,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
     });
   }
 
-  void _suggestAllocations() {
-    setState(() {
-      allocations.clear();
-      double totalAllocated = 0.0;
-
-      for (var category in selectedCategories) {
-        double allocatedAmount = excessMoney * (allocationPercentages[category.name] ?? 0.0);
-        allocations[category.name] = allocatedAmount.toStringAsFixed(2);
-        _controllers[category.name]?.text = allocatedAmount.toStringAsFixed(2);
-        totalAllocated += allocatedAmount;
-      }
-
-      excessMoney -= totalAllocated;
-    });
-  }
 
   void _navigateToShowAllocation() {
     Navigator.push(
@@ -90,8 +86,10 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
           selectedCategories: selectedCategories,
           controllers: _controllers,
           excessMoney: excessMoney,
+          totalSavings: totalSavings,
+          totalIncome: double.parse(incomeController.text),
+          incomeType: incomeType,
           allocate: _allocate,
-          suggestAllocations: _suggestAllocations,
         ),
       ),
     );
@@ -127,7 +125,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
                   incomeType = newValue!;
                 });
               },
-              items: <String>['Monthly', 'Weekly']
+              items: <String>['Monthly', 'Weekly', 'Every 15th']
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -172,15 +170,19 @@ class ShowAllocationPage extends StatefulWidget {
   final List<Category> selectedCategories;
   final Map<String, TextEditingController> controllers;
   final double excessMoney;
+  final double totalSavings;
+  final double totalIncome;
+  final String incomeType;
   final Function(String, String) allocate;
-  final VoidCallback suggestAllocations;
 
   ShowAllocationPage({
     required this.selectedCategories,
     required this.controllers,
     required this.excessMoney,
+    required this.totalSavings,
+    required this.totalIncome,
+    required this.incomeType,
     required this.allocate,
-    required this.suggestAllocations,
   });
 
   @override
@@ -232,10 +234,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      // Update the parent state with the modified selected categories
-                      setState(() {
-                        widget.suggestAllocations(); // Recalculate allocations based on updated categories
-                      });
+                      setState(() {});
                       Navigator.pop(context);
                     },
                     child: Text('Done'),
@@ -249,16 +248,42 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
     );
   }
 
+  Future<void> _saveDataToFirestore() async {
+    Map<String, dynamic> allocationsData = {};
+    widget.selectedCategories.forEach((category) {
+      allocationsData[category.name] = {
+        'categoryId': category.categoryId,
+        'amount': widget.controllers[category.name]?.text ?? '0',
+        'icon': category.icon,
+      };
+    });
+
+    await FirebaseFirestore.instance.collection('PayYourselfFirst').add({
+      'incomeType': widget.incomeType,
+      'totalIncome': widget.totalIncome,
+      'totalSavings': widget.totalSavings,
+      'excessMoney': widget.excessMoney,
+      'allocations': allocationsData,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Data Saved Successfully')),
+    );
+  }
+
+  void _navigateToRecordsPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Show Allocation'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.auto_awesome), // Changed icon to auto_awesome
-            onPressed: widget.suggestAllocations, // Transferred function to icon
-          ),
           IconButton(
             icon: Icon(Icons.edit),
             onPressed: () => _showCategorySelection(context),
@@ -306,7 +331,10 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: widget.suggestAllocations,
+                onPressed: () async {
+                  await _saveDataToFirestore();
+                  _navigateToRecordsPage(context);
+                },
               child: Text('Continue'),
             ),
           ],
@@ -315,7 +343,6 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
     );
   }
 }
-
 
 const List<String> allowedCategoryNames = [
   'House',

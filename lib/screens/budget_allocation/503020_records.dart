@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'addBudgetandAllocation.dart';
+
 class BudgetSummaryPage extends StatefulWidget {
   final String userId;
 
@@ -140,8 +142,8 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
         SnackBar(content: Text('Budget deleted successfully')),
       );
 
-      // Optionally, navigate back or refresh the page
-      Navigator.pop(context);
+      Navigator.push(context, MaterialPageRoute(builder: (context) => AddBudget(userId: '',)));
+
 
     } catch (e) {
       print("Error deleting budget: $e");
