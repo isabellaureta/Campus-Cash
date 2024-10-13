@@ -1,71 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:expense_repository/repositories.dart';
 
-class PriorityBasedBudgetingPage extends StatefulWidget {
-  @override
-  _PriorityBasedBudgetingPageState createState() => _PriorityBasedBudgetingPageState();
-}
-
-class _PriorityBasedBudgetingPageState extends State<PriorityBasedBudgetingPage> {
-  List<Category> selectedCategories = [];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Priority-Based Budgeting'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Priority-Based Budgeting',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Priority-based budgeting helps you allocate funds according to your financial priorities. '
-                  'This approach ensures that the most important expenses, such as tuition, rent, and essential supplies, are covered first, '
-                  'followed by secondary needs and wants. This budgeting method is especially useful for college students managing limited resources.',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 32),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CategorySelectionPage(onSelectionDone: (selected) {
-                      setState(() {
-                        selectedCategories = selected;
-                      });
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => RankCategoriesPage(
-                          selectedCategories: selectedCategories,
-                          onRankingDone: (rankedCategories) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => AllocationPage(selectedCategories: rankedCategories)),
-                            );
-                          },
-                        )),
-                      );
-                    })),
-                  );
-                },
-                child: const Text('Continue'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class CategorySelectionPage extends StatefulWidget {
   final void Function(List<Category>) onSelectionDone;
 
@@ -200,16 +135,43 @@ class _RankCategoriesPageState extends State<RankCategoriesPage> {
   }
 }
 
-class AllocationPage extends StatelessWidget {
+class AllocationPage2 extends StatefulWidget {
   final List<Category> selectedCategories;
 
-  AllocationPage({required this.selectedCategories});
+  AllocationPage2({required this.selectedCategories});
+
+  @override
+  _AllocationPage2State createState() => _AllocationPage2State();
+}
+
+class _AllocationPage2State extends State<AllocationPage2> {
+  final TextEditingController _incomeController = TextEditingController();
+  String _incomeType = 'Monthly';
+
+  // A map to store the amount entered for each category
+  Map<Category, TextEditingController> categoryAmountControllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers for each category
+    for (var category in widget.selectedCategories) {
+      categoryAmountControllers[category] = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose all the controllers when the widget is disposed
+    for (var controller in categoryAmountControllers.values) {
+      controller.dispose();
+    }
+    _incomeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController _incomeController = TextEditingController();
-    String _incomeType = 'Monthly';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Allocate Funds'),
@@ -221,7 +183,7 @@ class AllocationPage extends StatelessWidget {
           children: [
             const Text(
               'Enter Your Income',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -236,7 +198,9 @@ class AllocationPage extends StatelessWidget {
             DropdownButton<String>(
               value: _incomeType,
               onChanged: (String? newValue) {
-                _incomeType = newValue!;
+                setState(() {
+                  _incomeType = newValue!;
+                });
               },
               items: <String>['Monthly', 'Weekly'].map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
@@ -246,28 +210,38 @@ class AllocationPage extends StatelessWidget {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                final income = double.tryParse(_incomeController.text);
-                if (income != null) {
-                  _allocateBudget(income);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid income amount')),
-                  );
-                }
-              },
-              child: const Text('Allocate'),
-            ),
-            const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
-                itemCount: selectedCategories.length,
+                itemCount: widget.selectedCategories.length,
                 itemBuilder: (context, index) {
-                  final category = selectedCategories[index];
-                  return ListTile(
-                    leading: Image.asset(category.icon),
-                    title: Text(category.name),
+                  final category = widget.selectedCategories[index];
+                  final controller = categoryAmountControllers[category]!;  // Get the controller for the category
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ListTile(
+                      leading: Image.asset(
+                        category.icon,
+                        width: 40,  // Adjust the icon width
+                        height: 40,  // Adjust the icon height
+                      ),
+                      title: Text(
+                        category.name,
+                        style: const TextStyle(fontSize: 14), // Smaller font size
+                      ),
+                      subtitle: SizedBox(
+                        height: 40,  // Make the text field smaller in height
+                        child: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Amount',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),  // Reduce padding inside the text field
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -276,24 +250,5 @@ class AllocationPage extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _allocateBudget(double income) {
-    double remainingIncome = income;
-    final Map<String, double> allocatedBudget = {};
-
-    for (final category in selectedCategories) {
-      if (remainingIncome > 0) {
-        // Allocate a fixed percentage of remaining income based on priority
-        double allocation = remainingIncome * 0.1; // Example: 10% of remaining income
-        allocatedBudget[category.name] = allocation;
-        remainingIncome -= allocation;
-      } else {
-        allocatedBudget[category.name] = 0;
-      }
-    }
-
-    // Here you would update the UI or database with the allocatedBudget
-    print('Allocated Budget: $allocatedBudget');
   }
 }

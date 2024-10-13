@@ -447,10 +447,35 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
               'Allocate funds based on priority expenses.',
               'assets/prioritybased.png',
                   () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => PriorityBasedBudgetingPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CategorySelectionPage(
+                    onSelectionDone: (selectedCategories) {
+                      setState(() {
+                        selectedCategories = selectedCategories;
+                      });
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => RankCategoriesPage(
+                          selectedCategories: selectedCategories,
+                          onRankingDone: (rankedCategories) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => AllocationPage2(
+                                selectedCategories: rankedCategories,
+                              )),
+                            );
+                          },
+                        )),
+                      );
+                    },
+                  )),
+                );
               },
             ),
           ),
+
+
         ],
       ),
     );
