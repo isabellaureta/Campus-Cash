@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'PayYourselfFirstRecords.dart';
@@ -165,7 +166,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
     );
   }
 }
-
 class ShowAllocationPage extends StatefulWidget {
   final List<Category> selectedCategories;
   final Map<String, TextEditingController> controllers;
@@ -190,6 +190,95 @@ class ShowAllocationPage extends StatefulWidget {
 }
 
 class _ShowAllocationPageState extends State<ShowAllocationPage> {
+  final Map<String, String> allocations = {}; // Store allocations per category
+  double remainingIncome = 0.0;  // Remaining income after allocations
+  bool isSaving = false;         // Saving state for Firestore
+  String? warningMessage;        // Warning when income is exceeded
+
+  final Map<String, TextEditingController> _controllers = {};  // Text controllers for inputs
+
+  @override
+  void initState() {
+    super.initState();
+    remainingIncome = widget.excessMoney;  // Initialize remaining income with the excess money
+
+    for (var category in widget.selectedCategories) {
+      _controllers[category.name] = widget.controllers[category.name] ?? TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _allocate(String category, String amount) {
+    setState(() {
+      allocations[category] = amount;  // Store allocation in the map
+
+      // Calculate the total allocated amount
+      double totalAllocated = allocations.values.fold(0.0, (sum, amount) {
+        return sum + (double.tryParse(amount) ?? 0.0);
+      });
+
+      // Update the remaining income
+      remainingIncome = widget.excessMoney - totalAllocated;
+
+      // Check if remaining income is negative and set the warning message
+      if (remainingIncome < 0) {
+        warningMessage = 'Exceeding remaining income';
+      } else {
+        warningMessage = null;  // Clear the warning message if within limits
+      }
+    });
+  }
+
+  Future<void> _saveDataToFirestore() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      String userId = user.uid;
+
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
+
+      Map<String, dynamic> allocationsData = {};
+      for (var entry in allocations.entries) {
+        double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
+        allocationsData[entry.key] = {
+          'categoryId': entry.key,
+          'amount': allocatedAmount,
+          'icon': 'assets/icons/${entry.key.toLowerCase()}.png',  // Assuming icon paths
+        };
+      }
+
+      await userDocRef.set({
+        'incomeType': widget.incomeType,
+        'totalIncome': widget.totalIncome,
+        'totalSavings': widget.totalSavings,
+        'excessMoney': widget.excessMoney,
+        'allocations': allocationsData,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Allocations saved successfully!')),
+      );
+
+      // Navigate to PayYourselfFirstRecords
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save allocations: $e')),
+      );
+    }
+  }
+
   void _showCategorySelection(BuildContext parentContext) {
     showModalBottomSheet(
       context: parentContext,
@@ -218,7 +307,8 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
                               if (value == true) {
                                 setState(() {
                                   widget.selectedCategories.add(category);
-                                  widget.controllers[category.name] = TextEditingController();
+                                  widget.controllers[category.name] =
+                                      TextEditingController();
                                 });
                               } else {
                                 setState(() {
@@ -248,36 +338,6 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
     );
   }
 
-  Future<void> _saveDataToFirestore() async {
-    Map<String, dynamic> allocationsData = {};
-    widget.selectedCategories.forEach((category) {
-      allocationsData[category.name] = {
-        'categoryId': category.categoryId,
-        'amount': widget.controllers[category.name]?.text ?? '0',
-        'icon': category.icon,
-      };
-    });
-
-    await FirebaseFirestore.instance.collection('PayYourselfFirst').add({
-      'incomeType': widget.incomeType,
-      'totalIncome': widget.totalIncome,
-      'totalSavings': widget.totalSavings,
-      'excessMoney': widget.excessMoney,
-      'allocations': allocationsData,
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Data Saved Successfully')),
-    );
-  }
-
-  void _navigateToRecordsPage(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -294,25 +354,29 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text('Remaining Income for Allocation: \$${widget.excessMoney.toStringAsFixed(2)}'),
+            Text(
+              'Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: remainingIncome < 0 ? Colors.red : Colors.black,  // Red if exceeding
+              ),
+            ),
+            if (warningMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  warningMessage!,
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ),
             Expanded(
               child: ListView.builder(
                 itemCount: widget.selectedCategories.length,
                 itemBuilder: (context, index) {
                   final category = widget.selectedCategories[index];
+                  final controller = _controllers[category.name];
+
                   return ListTile(
-                    title: Row(
-                      children: [
-                        Image.asset(
-                          category.icon,
-                          width: 24,
-                          height: 24,
-                          color: Color(category.color),
-                        ),
-                        SizedBox(width: 8),
-                        Text(category.name),
-                      ],
-                    ),
+                    title: Text(category.name),
                     trailing: Container(
                       width: 100,
                       child: TextField(
@@ -321,9 +385,9 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
                           hintText: 'Amount',
                         ),
                         onChanged: (value) {
-                          widget.allocate(category.name, value);
+                          _allocate(category.name, value);
                         },
-                        controller: widget.controllers[category.name],
+                        controller: controller,
                       ),
                     ),
                   );
@@ -331,11 +395,8 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
               ),
             ),
             ElevatedButton(
-                onPressed: () async {
-                  await _saveDataToFirestore();
-                  _navigateToRecordsPage(context);
-                },
-              child: Text('Continue'),
+              onPressed: (isSaving || remainingIncome < 0) ? null : _saveDataToFirestore,
+              child: isSaving ? CircularProgressIndicator() : Text('Confirm'),
             ),
           ],
         ),

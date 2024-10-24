@@ -53,7 +53,12 @@ class FirebaseExpenseRepo implements ExpenseRepository {
           .doc(updatedExpense.expenseId)
           .set(updatedExpense.toEntity().toDocument());
 
+      // Deduct the expense from the category in the 503020 budget system
       final categoryDeducted = await _deductExpenseFromCategory(user.uid, updatedExpense.category.categoryId, updatedExpense.amount);
+
+      // Deduct from the PayYourselfFirst budget system
+      await _deductFromPayYourselfFirst(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
+
       await _deductFromRemainingBudget(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
 
       if (!categoryDeducted) {
@@ -67,6 +72,47 @@ class FirebaseExpenseRepo implements ExpenseRepository {
       rethrow;
     }
   }
+
+  Future<void> _deductFromPayYourselfFirst(String userId, String categoryId, double expenseAmount) async {
+    try {
+      final payYourselfFirstDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
+
+      // Run the deduction in a Firestore transaction
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final payYourselfFirstSnapshot = await transaction.get(payYourselfFirstDocRef);
+
+        if (payYourselfFirstSnapshot.exists) {
+          final allocations = payYourselfFirstSnapshot.get('allocations') as Map<String, dynamic>;
+
+          if (allocations.containsKey(categoryId)) {
+            // Get the current amount for the matching category
+            double currentAmount = allocations[categoryId]['amount'] ?? 0.0;
+
+            // Deduct the expense amount
+            double updatedAmount = currentAmount - expenseAmount;
+            if (updatedAmount < 0) updatedAmount = 0.0; // Prevent negative budget
+
+            // Update the Firestore document with the new amount
+            allocations[categoryId]['amount'] = updatedAmount;
+
+            transaction.update(payYourselfFirstDocRef, {
+              'allocations': allocations,
+            });
+
+            log('PayYourselfFirst budget updated for category $categoryId: New Amount = $updatedAmount');
+          } else {
+            log('Category with ID $categoryId not found in PayYourselfFirst.');
+          }
+        } else {
+          log('No PayYourselfFirst document found for user $userId.');
+        }
+      });
+    } catch (e) {
+      log('Failed to deduct from PayYourselfFirst budget for category $categoryId: ${e.toString()}');
+      rethrow;
+    }
+  }
+
 
   Future<bool> _deductExpenseFromCategory(String userId, String categoryId, int expenseAmount) async {
     try {

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'addBudgetandAllocation.dart';
@@ -9,22 +10,34 @@ class PayYourselfFirstRecords extends StatefulWidget {
 }
 
 class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
-  late Future<List<Map<String, dynamic>>> _records;
+  late Future<Map<String, dynamic>?> _record;  // Fetch the user's record
 
   @override
   void initState() {
     super.initState();
-    _records = _fetchRecords();
+    _record = _fetchRecord();  // Fetch the record on initialization
   }
 
-  Future<List<Map<String, dynamic>>> _fetchRecords() async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('PayYourselfFirst').get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id; // Explicitly add the document ID
-      return data;
-    }).toList();
+  // Fetch the saved record from Firestore for the current user
+  Future<Map<String, dynamic>?> _fetchRecord() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;  // No user logged in
+
+    // Fetch the Pay-Yourself-First record for the current user
+    DocumentSnapshot snapshot = await FirebaseFirestore.instance
+        .collection('PayYourselfFirst')
+        .doc(user.uid)
+        .get();
+
+    if (snapshot.exists) {
+      // Include document ID with the returned data
+      Map<String, dynamic> recordData = snapshot.data() as Map<String, dynamic>;
+      recordData['id'] = snapshot.id; // Store document ID
+      return recordData;
+    }
+    return null;
   }
+
 
   Future<void> _deleteRecordData(String documentId) async {
     try {
@@ -37,15 +50,13 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
         SnackBar(content: Text('Record deleted successfully')),
       );
 
-      // Navigate back to AddBudget class after successful deletion
-      Navigator.push(context, MaterialPageRoute(builder: (context) => AddBudget(userId: '',)));
+      Navigator.pop(context);  // Navigate back after deletion
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete record: $e')),
       );
     }
   }
-
 
   Future<void> _confirmDelete(String documentId) async {
     final shouldDelete = await showDialog<bool>(
@@ -71,67 +82,83 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Your Savings Records'),
+        title: Text('Your Pay Yourself First Records'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _records,
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _record,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error fetching records'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No records found'));
+            return Center(child: Text('Error fetching records: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data == null) {
+            return Center(child: Text('No records found.'));
           } else {
-            List<Map<String, dynamic>> records = snapshot.data!;
-            return ListView.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                var record = records[index];
-                var allocations = record['allocations'] as Map<String, dynamic>;
+            var record = snapshot.data!;
+            var allocations = record['allocations'] as Map<String, dynamic>;  // Retrieve the allocations map
 
-                return Card(
-                  margin: const EdgeInsets.all(8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Income Type: ${record['incomeType']}', style: TextStyle(fontSize: 18)),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _confirmDelete(record['id']),
-                            ),
-                          ],
-                        ),
-                        Text('Total Income: \$${record['totalIncome'].toStringAsFixed(2)}'),
-                        Text('Total Savings: \$${record['totalSavings'].toStringAsFixed(2)}'),
-                        Text('Excess Money: \$${record['excessMoney'].toStringAsFixed(2)}'),
-                        Divider(),
-                        Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Column(
-                          children: allocations.entries.map((entry) {
-                            var details = entry.value as Map<String, dynamic>;
-                            return ListTile(
-                              leading: Image.asset(details['icon'], width: 24, height: 24),
-                              title: Text(entry.key),
-                              trailing: Text('\$${details['amount']}'),
-                            );
-                          }).toList(),
-                        ),
-                      ],
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ListView(
+                children: [
+                  Card(
+                    elevation: 4,
+                    margin: EdgeInsets.all(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Income Type: ${record['incomeType']}',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _confirmDelete(record['id']),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text('Total Income: ₱${record['totalIncome'].toStringAsFixed(2)}'),
+                          Text('Total Savings: ₱${record['totalSavings'].toStringAsFixed(2)}'),
+                          Text('Excess Money: ₱${record['excessMoney'].toStringAsFixed(2)}'),
+                          Text('Frequency: ${record['incomeType']}'),
+                          Divider(),
+                          Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: allocations.length,
+                            itemBuilder: (context, index) {
+                              var entry = allocations.entries.elementAt(index);
+                              var details = entry.value as Map<String, dynamic>;
+
+                              return ListTile(
+                                leading: SizedBox( // Constrain the size of the leading widget (icon)
+                                  width: 40,  // Specify the width
+                                  height: 40, // Specify the height
+                                  child: Image.asset(details['icon'], fit: BoxFit.contain),
+                                ),
+                                title: Text(entry.key),
+                                trailing: Text('₱${details['amount'].toString()}'),
+                              );
+
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
+                ],
+              ),
             );
           }
         },

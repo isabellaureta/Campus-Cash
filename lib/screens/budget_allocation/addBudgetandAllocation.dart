@@ -10,6 +10,7 @@ import 'package:lottie/lottie.dart';
 
 import '503020_budgeting_page.dart';
 import '503020_records.dart';
+import 'PayYourselfFirstRecords.dart';
 import 'addBudget.dart';
 import 'envelope_budgeting_page.dart';
 import 'envelope_records.dart';
@@ -182,60 +183,73 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
     try {
       if (_currentUser == null) return;
 
-      // Reference to envelope allocations in Firestore
-      final envelopeRef = FirebaseFirestore.instance
-          .collection('envelopeAllocations')
-          .doc(_currentUser!.uid)
-          .collection('envelopes');
+      // Reference to Pay-Yourself-First records in Firestore
+      final payYourselfFirstRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(_currentUser!.uid);
 
-      // Fetch the envelope data to check if any exists
-      final envelopeSnapshot = await envelopeRef.get();
+      // Fetch the saved Pay-Yourself-First data
+      final payYourselfFirstSnapshot = await payYourselfFirstRef.get();
 
-      // If there are envelopes saved, navigate to EnvelopeBudgetingPage
-      if (envelopeSnapshot.docs.isNotEmpty) {
-        final allocations = <String, double>{};
-
-        for (var doc in envelopeSnapshot.docs) {
-          var data = doc.data();
-          allocations[data['categoryName']] = (data['allocatedAmount'] as num).toDouble();
-        }
-
+      // If Pay-Yourself-First data exists, navigate to PayYourselfFirstRecords
+      if (payYourselfFirstSnapshot.exists) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => EnvelopeBudgetingPage(
-              allocations: allocations,
-            ),
+            builder: (context) => PayYourselfFirstRecords(),
           ),
         );
       } else {
-        // If no envelopes found, fetch saved budget summary from Firestore
-        final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
-        final budgetSnapshot = await budgetRef.get();
+        // If no Pay-Yourself-First data, handle other budget data (e.g., EnvelopeBudgeting)
+        final envelopeRef = FirebaseFirestore.instance
+            .collection('envelopeAllocations')
+            .doc(_currentUser!.uid)
+            .collection('envelopes');
 
-        // Check if there is a saved budget and navigate to BudgetSummaryPage
-        if (budgetSnapshot.exists) {
-          final data = budgetSnapshot.data() as Map<String, dynamic>;
-          final totalBudget = data['totalBudget'] ?? 0.0;
-          final totalExpenses = data['totalExpenses'] ?? 0.0;
-          final remainingBudget = totalBudget - totalExpenses;
+        final envelopeSnapshot = await envelopeRef.get();
+
+        if (envelopeSnapshot.docs.isNotEmpty) {
+          final allocations = <String, double>{};
+
+          for (var doc in envelopeSnapshot.docs) {
+            var data = doc.data();
+            allocations[data['categoryName']] = (data['allocatedAmount'] as num).toDouble();
+          }
 
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => BudgetSummaryPage(
-                totalBudget: totalBudget,
-                totalExpenses: totalExpenses,
-                remainingBudget: remainingBudget,
-                expenses: {
-                  'Needs': data['Needs'],
-                  'Wants': data['Wants'],
-                  'Savings': data['Savings'],
-                }, // Pass the 'Needs', 'Wants', and 'Savings' data
-                userId: _currentUser!.uid,
+              builder: (context) => EnvelopeBudgetingPage(
+                allocations: allocations,
               ),
             ),
           );
+        } else {
+          // Fetch saved budget summary (50/30/20) from Firestore if no envelope found
+          final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
+          final budgetSnapshot = await budgetRef.get();
+
+          if (budgetSnapshot.exists) {
+            final data = budgetSnapshot.data() as Map<String, dynamic>;
+            final totalBudget = data['totalBudget'] ?? 0.0;
+            final totalExpenses = data['totalExpenses'] ?? 0.0;
+            final remainingBudget = totalBudget - totalExpenses;
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BudgetSummaryPage(
+                  totalBudget: totalBudget,
+                  totalExpenses: totalExpenses,
+                  remainingBudget: remainingBudget,
+                  expenses: {
+                    'Needs': data['Needs'],
+                    'Wants': data['Wants'],
+                    'Savings': data['Savings'],
+                  },
+                  userId: _currentUser!.uid,
+                ),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
@@ -244,6 +258,7 @@ class _AddBudgetState extends State<AddBudget> with SingleTickerProviderStateMix
       );
     }
   }
+
 
   @override
   void dispose() {
