@@ -246,12 +246,22 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
 
       Map<String, dynamic> allocationsData = {};
+
+      // Iterate through the allocations and map category names to their categoryId from predefinedCategories
       for (var entry in allocations.entries) {
         double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
-        allocationsData[entry.key] = {
-          'categoryId': entry.key,
+
+        // Find the corresponding category in predefinedCategories based on the name
+        final category = predefinedCategories.firstWhere(
+              (cat) => cat.name == entry.key,
+          orElse: () => throw Exception('Category not found: ${entry.key}'),
+        );
+
+        allocationsData[category.categoryId] = {
+          'categoryName': category.name,
+          'categoryId': category.categoryId,  // Use the actual categoryId from predefinedCategories
           'amount': allocatedAmount,
-          'icon': 'assets/icons/${entry.key.toLowerCase()}.png',  // Assuming icon paths
+          'icon': category.icon ?? 'assets/${category.name.toLowerCase()}.png',  // Assuming icon is provided in category
         };
       }
 
@@ -278,6 +288,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
       );
     }
   }
+
 
   void _showCategorySelection(BuildContext parentContext) {
     showModalBottomSheet(

@@ -72,6 +72,8 @@ class _MainScreenState extends State<MainScreen> {
   double _totalBudget = 0;
   double _remainingBudget = 0;
   String _userName = '';
+  double _totalExpenses = 0;
+
 
   @override
   void initState() {
@@ -93,8 +95,20 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _loadTransactions() async {
     transactions = await _fetchTransactions();
-    setState(() {});
+
+    // Calculate total expenses by summing up all non-income transactions
+    double totalExpenses = 0;
+    for (var transaction in transactions) {
+      if (!transaction.isIncome) {
+        totalExpenses += transaction.amount;
+      }
+    }
+
+    setState(() {
+      _totalExpenses = totalExpenses;  // Update the total expenses
+    });
   }
+
 
   Future<List<Transaction>> _fetchTransactions() async {
     User? user = _auth.currentUser;
@@ -121,7 +135,15 @@ class _MainScreenState extends State<MainScreen> {
         .collection('transactions')
         .doc(transaction.id)
         .set(transaction.toMap());
+
+    // Recalculate total expenses
+    if (!transaction.isIncome) {
+      setState(() {
+        _totalExpenses += transaction.amount;
+      });
+    }
   }
+
 
 
   Future<void> _fetchBudgetData() async {
@@ -136,6 +158,22 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
   }
+
+  /*Future<void> _handleCreateExpense(Expense expense) async {
+    final result = await _firebaseExpenseRepo.createExpense(expense);
+
+    if (result == null) {
+      // Expense created successfully, update the UI here
+      setState(() {
+        _totalExpenses += expense.amount;
+      });
+    } else {
+      // Handle any errors here
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result)),
+      );
+    }
+  }*/
 
 
   List<Transaction> _getAllTransactions() {
@@ -342,41 +380,42 @@ class _MainScreenState extends State<MainScreen> {
                               width: 25,
                               height: 25,
                               decoration: const BoxDecoration(
-                                  color: Colors.white30,
-                                  shape: BoxShape.circle
+                                color: Colors.white30,
+                                shape: BoxShape.circle,
                               ),
                               child: const Center(
-                                  child: Icon(
-                                    CupertinoIcons.arrow_down,
-                                    size: 12,
-                                    color: Colors.red,
-                                  )
+                                child: Icon(
+                                  CupertinoIcons.arrow_down,
+                                  size: 12,
+                                  color: Colors.red,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 3),
-                            const Column(
+                            Column(  // Remove the const here, since _totalExpenses is dynamic
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Expenses',
                                   style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w400
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
                                 Text(
-                                  '00.00',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600
+                                  '₱${_totalExpenses.toStringAsFixed(2)}',  // No const here, dynamic content
+                                  style: const TextStyle(  // const is fine here for static values
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
-                            )
+                            ),
                           ],
                         )
+
                       ],
                     ),
                   )
@@ -517,24 +556,54 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
-  void _deleteExpenseTransaction(Expense expense) {
-    FirebaseFirestore.instance
-        .collection('expenses')
-        .doc(expense.expenseId)
-        .delete()
-        .then((_) {
-      setState(() {
-        widget.expenses.remove(expense);
-      });
+  void _deleteExpenseTransaction(Expense expense) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(user.uid);
+
+      // Fetch the current remaining budget
+      final budgetSnapshot = await budgetDoc.get();
+
+      if (budgetSnapshot.exists) {
+        final currentRemaining = budgetSnapshot.data()?['remaining'] ?? 0.0;
+
+        // Add the deleted expense amount back to the remaining budget
+        final newRemaining = currentRemaining + expense.amount;
+
+        // Update the remaining field in the budget document
+        await budgetDoc.update({
+          'remaining': newRemaining,
+        });
+
+        // Now delete the expense
+        FirebaseFirestore.instance
+            .collection('expenses')
+            .doc(expense.expenseId)
+            .delete()
+            .then((_) {
+          setState(() {
+            widget.expenses.remove(expense);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Expense transaction deleted and budget updated')),
+          );
+        }).catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete expense transaction')),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No budget found for the user')),
+        );
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Expense transaction deleted')),
+        const SnackBar(content: Text('No authenticated user found')),
       );
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete expense transaction')),
-      );
-    });
+    }
   }
+
 
   void _showDeleteExpenseConfirmationDialog(BuildContext context, Expense expense) {
     showDialog(
@@ -563,24 +632,54 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _deleteIncomeTransaction(Income income) {
-    FirebaseFirestore.instance
-        .collection('incomes')
-        .doc(income.incomeId)
-        .delete()
-        .then((_) {
-      setState(() {
-        widget.incomes.remove(income);
-      });
+  void _deleteIncomeTransaction(Income income) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(user.uid);
+
+      // Fetch the current remaining budget
+      final budgetSnapshot = await budgetDoc.get();
+
+      if (budgetSnapshot.exists) {
+        final currentRemaining = budgetSnapshot.data()?['remaining'] ?? 0.0;
+
+        // Subtract the deleted income amount from the remaining budget
+        final newRemaining = (currentRemaining - income.amount).clamp(0.0, double.infinity);
+
+        // Update the remaining field in the budget document
+        await budgetDoc.update({
+          'remaining': newRemaining,
+        });
+
+        // Now delete the income transaction
+        FirebaseFirestore.instance
+            .collection('incomes')
+            .doc(income.incomeId)
+            .delete()
+            .then((_) {
+          setState(() {
+            widget.incomes.remove(income);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Income transaction deleted and budget updated')),
+          );
+        }).catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete income transaction')),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No budget found for the user')),
+        );
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Income transaction deleted')),
+        const SnackBar(content: Text('No authenticated user found')),
       );
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete income transaction')),
-      );
-    });
+    }
   }
+
 
   void _showDeleteIncomeConfirmationDialog(BuildContext context, Income income) {
     showDialog(

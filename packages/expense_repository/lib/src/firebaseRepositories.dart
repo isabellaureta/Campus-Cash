@@ -61,45 +61,73 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
       await _deductFromRemainingBudget(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
 
+      await _deductFromOverallRemainingBudget(user.uid, updatedExpense.amount.toDouble());
+
       if (!categoryDeducted) {
         return 'No matched category in your budget';
       } else {
         log('Expense created and budget updated successfully.');
         return null;
       }
+
     } catch (e) {
       log('Failed to create expense: ${e.toString()}');
       rethrow;
     }
   }
 
+  Future<void> _deductFromOverallRemainingBudget(String userId, double expenseAmount) async {
+    final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(userId);
+    final budgetSnapshot = await budgetDoc.get();
+
+    if (budgetSnapshot.exists) {
+      final currentRemaining = budgetSnapshot.data()?['remaining'] ?? 0.0;
+
+      // Ensure the remaining budget doesn't go below zero
+      final newRemaining = (currentRemaining - expenseAmount).clamp(0.0, double.infinity);
+
+      // Update the remaining field in the budget document
+      await budgetDoc.update({
+        'remaining': newRemaining,
+      });
+    } else {
+      throw Exception('No budget found for the user.');
+    }
+  }
+
+
+
   Future<void> _deductFromPayYourselfFirst(String userId, String categoryId, double expenseAmount) async {
     try {
-      final payYourselfFirstDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
+      final payYourselfFirstDocRef = FirebaseFirestore.instance
+          .collection('PayYourselfFirst')
+          .doc(userId);
 
       // Run the deduction in a Firestore transaction
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final payYourselfFirstSnapshot = await transaction.get(payYourselfFirstDocRef);
 
         if (payYourselfFirstSnapshot.exists) {
-          final allocations = payYourselfFirstSnapshot.get('allocations') as Map<String, dynamic>;
+          // Get the current allocations for the user
+          Map<String, dynamic> allocations = payYourselfFirstSnapshot.get('allocations') as Map<String, dynamic>;
 
           if (allocations.containsKey(categoryId)) {
-            // Get the current amount for the matching category
-            double currentAmount = allocations[categoryId]['amount'] ?? 0.0;
+            // Retrieve the current allocated amount
+            double allocatedAmount = allocations[categoryId]['amount'] ?? 0.0;
 
-            // Deduct the expense amount
-            double updatedAmount = currentAmount - expenseAmount;
-            if (updatedAmount < 0) updatedAmount = 0.0; // Prevent negative budget
+            // Calculate the new allocated amount after deduction
+            double updatedAllocatedAmount = allocatedAmount - expenseAmount;
+            if (updatedAllocatedAmount < 0) updatedAllocatedAmount = 0.0;  // Prevent negative amount
 
-            // Update the Firestore document with the new amount
-            allocations[categoryId]['amount'] = updatedAmount;
+            // Update the Firestore document with the new allocated amount
+            allocations[categoryId]['amount'] = updatedAllocatedAmount;
 
+            // Perform the transaction update
             transaction.update(payYourselfFirstDocRef, {
               'allocations': allocations,
             });
 
-            log('PayYourselfFirst budget updated for category $categoryId: New Amount = $updatedAmount');
+            log('PayYourselfFirst budget updated for category $categoryId: New Amount = $updatedAllocatedAmount');
           } else {
             log('Category with ID $categoryId not found in PayYourselfFirst.');
           }
@@ -112,6 +140,9 @@ class FirebaseExpenseRepo implements ExpenseRepository {
       rethrow;
     }
   }
+
+
+
 
 
   Future<bool> _deductExpenseFromCategory(String userId, String categoryId, int expenseAmount) async {
