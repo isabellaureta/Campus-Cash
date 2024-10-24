@@ -16,7 +16,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _notificationsEnabled = false;
   String? _profileImageUrl;
@@ -37,7 +36,6 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _nameController.text = userDoc['name'];
         _emailController.text = user.email!;
-        _contactController.text = userDoc['contact'];
         _profileImageUrl = userDoc['profileImageUrl'];
         _notificationsEnabled = userDoc['notificationsEnabled'];
         _selectedTime = TimeOfDay(
@@ -56,7 +54,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).update({
         'name': _nameController.text,  // Update the user's name in Firebase
-        'contact': _contactController.text,
         'profileImageUrl': _profileImageUrl,
         'notificationsEnabled': _notificationsEnabled,
         'notificationHour': _selectedTime.hour,
@@ -142,15 +139,6 @@ class _ProfilePageState extends State<ProfilePage> {
               controller: _emailController,
               decoration: InputDecoration(labelText: 'Email'),
             ),
-            TextField(
-              controller: _contactController,
-              decoration: InputDecoration(labelText: 'Contact Information'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'New Password'),
-              obscureText: true,
-            ),
             SwitchListTile(
               title: Text('Enable Notifications'),
               value: _notificationsEnabled,
@@ -172,10 +160,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton(
               onPressed: _updateUserProfile,
               child: Text('Update Profile'),
-            ),
-            ElevatedButton(
-              onPressed: _changePassword,
-              child: Text('Change Password'),
             ),
             ElevatedButton(
               onPressed: _deleteAccount,
