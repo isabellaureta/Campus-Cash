@@ -1,12 +1,17 @@
+import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'addBudgetandAllocation.dart';
 
 class BudgetSummaryPage extends StatefulWidget {
   final String userId;
 
-  BudgetSummaryPage({required this.userId, required totalBudget, required totalExpenses, required remainingBudget, required Map expenses});
+  BudgetSummaryPage({
+    required this.userId,
+    required totalBudget,
+    required totalExpenses,
+    required remainingBudget,
+    required Map expenses,
+  });
 
   @override
   _BudgetSummaryPageState createState() => _BudgetSummaryPageState();
@@ -30,33 +35,36 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final budgetSnapshot = await userDocRef.get();
     final budgetData = budgetSnapshot.data() ?? {};
 
-    // Fetch Needs categories
+    // Calculate remaining budget as totalBudget - totalExpenses
+    final totalBudget = budgetData['totalBudget'] ?? 0.0;
+    final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
+    final calculatedRemainingBudget = totalBudget - totalExpenses;
+
+    // Update Firestore with the correct remaining budget if it’s different
+    if (budgetData['remainingBudget'] != calculatedRemainingBudget) {
+      await userDocRef.update({'remainingBudget': calculatedRemainingBudget});
+    }
+
     // Fetch Needs, Wants, and Savings categories
     final needsSnapshot = await userDocRef.collection('Needs').get();
-    final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
-
-    // Fetch Wants categories
     final wantsSnapshot = await userDocRef.collection('Wants').get();
-    final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
-
-    // Fetch Savings categories
     final savingsSnapshot = await userDocRef.collection('Savings').get();
+
+    final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
+    final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
     final savingsCategories = savingsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Fetch total deductions from Firestore
-    double totalDeductions = 0;
+    // Calculate total deductions for each category type
     final totalNeedsDeductions = await _fetchTotalDeductions(userDocRef, 'Needs');
     final totalWantsDeductions = await _fetchTotalDeductions(userDocRef, 'Wants');
     final totalSavingsDeductions = await _fetchTotalDeductions(userDocRef, 'Savings');
-
-    totalDeductions = totalNeedsDeductions + totalWantsDeductions + totalSavingsDeductions;
 
     return {
       'budgetData': budgetData,
       'needsCategories': needsCategories,
       'wantsCategories': wantsCategories,
       'savingsCategories': savingsCategories,
-      'totalDeductions': totalDeductions,  // Include total deductions
+      'totalDeductions': totalNeedsDeductions + totalWantsDeductions + totalSavingsDeductions,
     };
   }
 
@@ -64,7 +72,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final totalDeductionsDoc = await userDocRef.collection('TotalDeductions').doc(categoryType).get();
     return totalDeductionsDoc.exists ? totalDeductionsDoc['totalDeductions'] ?? 0.0 : 0.0;
   }
-
 
   // Widget to display the category list
   Widget _buildCategoryList(List<dynamic> categories) {
@@ -142,9 +149,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
         SnackBar(content: Text('Budget deleted successfully')),
       );
 
-      Navigator.push(context, MaterialPageRoute(builder: (context) => AddBudget(userId: '',)));
-
-
+      Navigator.push(context, MaterialPageRoute(builder: (context) => BudgetSelectionPage()));
     } catch (e) {
       print("Error deleting budget: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -177,23 +182,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
         );
       },
     );
-  }
-
-  Future<double> _fetchTotalExpenses() async {
-    double totalExpenses = 0.0;
-    try {
-      final expenseSnapshot = await FirebaseFirestore.instance
-          .collection('expenses')
-          .where('userId', isEqualTo: widget.userId)
-          .get();
-
-      for (var doc in expenseSnapshot.docs) {
-        totalExpenses += (doc['amount'] as num).toDouble();
-      }
-    } catch (e) {
-      print('Error fetching total expenses: $e');
-    }
-    return totalExpenses;
   }
 
   @override
@@ -246,8 +234,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
 
           final totalBudget = budgetData['totalBudget'] ?? 0.0;
           final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
-          final remainingBudget = totalBudget - totalExpenses;  // Update remainingBudget using totalExpenses
-          final frequency = budgetData['frequency'] ?? 'N/A';
+          final remainingBudget = budgetData['remainingBudget'] ?? 0.0;  // Use remainingBudget from Firestore
           final totalDeductions = snapshot.data!['totalDeductions'] ?? 0.0;  // Total expenses made
 
           return Column(
@@ -261,19 +248,15 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                       'Total Budget: ₱${totalBudget.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
-                    Text(
-                      'Frequency: $frequency',
-                      style: TextStyle(fontSize: 16),
-                    ),
+
                     SizedBox(height: 8.0),
                     // Display total expenses made
                     Text(
                       'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
-                      semanticsLabel: 'Total Expenses Made: ₱${totalDeductions.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
-                    // Display remaining budget
+                    // Display remaining budget from Firestore
                     Text(
                       'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
@@ -289,9 +272,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                     _buildTabContent('Needs', needsCategories),
                     _buildTabContent('Wants', wantsCategories),
                     _buildTabContent('Savings', savingsCategories),
-                    _buildTabContent('Needs', snapshot.data!['needsCategories']),
-                    _buildTabContent('Wants', snapshot.data!['wantsCategories']),
-                    _buildTabContent('Savings', snapshot.data!['savingsCategories']),
                   ],
                 ),
               ),
@@ -302,4 +282,3 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     );
   }
 }
-

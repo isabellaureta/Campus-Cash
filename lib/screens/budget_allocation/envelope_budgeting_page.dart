@@ -44,7 +44,6 @@ class IncomeInputPage extends StatefulWidget {
 
 class _IncomeInputPageState extends State<IncomeInputPage> {
   TextEditingController incomeController = TextEditingController();
-  String frequency = 'Monthly';
 
   @override
   Widget build(BuildContext context) {
@@ -59,27 +58,14 @@ class _IncomeInputPageState extends State<IncomeInputPage> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: 'Income Amount'),
             ),
-            DropdownButton<String>(
-              value: frequency,
-              items: <String>['Weekly', 'Every 15th', 'Monthly'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  frequency = newValue!;
-                });
-              },
-            ),
+
             ElevatedButton(
               onPressed: () {
                 double income = double.parse(incomeController.text);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AllocationPage(income: income, frequency: frequency),
+                    builder: (context) => AllocationPage(income: income),
                   ),
                 );
               },
@@ -94,9 +80,8 @@ class _IncomeInputPageState extends State<IncomeInputPage> {
 
 class AllocationPage extends StatefulWidget {
   final double income;
-  final String frequency;
 
-  AllocationPage({required this.income, required this.frequency});
+  AllocationPage({required this.income});
 
   @override
   _AllocationPageState createState() => _AllocationPageState();
@@ -226,21 +211,25 @@ class _AllocationPageState extends State<AllocationPage> {
 
       String userId = user.uid;
 
+      // Reference to the user document in envelopeAllocations
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(userId);
+
+      // Save income, frequency, initial envelopeExpenses (0), and initial remainingEnvelope (income)
+      await userDocRef.set({
+        'income': widget.income,
+        'envelopeExpenses': 0.0, // Start with zero since no expenses have been created yet
+        'remainingEnvelope': widget.income, // Start with the full income amount
+      }, SetOptions(merge: true));
 
       Map<String, double> validAllocations = {};
       for (var entry in allocations.entries) {
         if (entry.value.isNotEmpty && double.tryParse(entry.value) != null) {
-          // Find the category by name
           Category? category = predefinedCategories.firstWhere((cat) => cat.name == entry.key);
 
-          // Parse the allocated amount
           double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
-
-          // Remaining budget is the same as allocated budget initially
           double remainingBudget = allocatedAmount;
 
-          // Save to Firestore
+          // Save each allocation under a subcollection
           await userDocRef.collection('envelopes').doc(category.categoryId).set({
             'categoryName': category.name,
             'categoryId': category.categoryId,
@@ -248,7 +237,6 @@ class _AllocationPageState extends State<AllocationPage> {
             'remainingBudget': remainingBudget,
           });
 
-          // Include only categories with valid allocation amounts
           validAllocations[category.name] = allocatedAmount;
         }
       }
@@ -257,7 +245,7 @@ class _AllocationPageState extends State<AllocationPage> {
         SnackBar(content: Text('Allocations saved successfully!')),
       );
 
-      // Navigate to the EnvelopeBudgetingPage with filtered allocations
+      // Navigate to EnvelopeBudgetingPage with the saved allocations
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -276,6 +264,7 @@ class _AllocationPageState extends State<AllocationPage> {
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

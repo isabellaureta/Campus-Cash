@@ -1,8 +1,8 @@
+import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'addBudgetandAllocation.dart';
 import 'envelope_budgeting_page.dart';
 
 class EnvelopeBudgetingPage extends StatefulWidget {
@@ -16,9 +16,10 @@ class EnvelopeBudgetingPage extends StatefulWidget {
 
 class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   bool isSaving = false;
-
-  // New Map to store the actual remaining budget fetched from Firestore
   Map<String, double> remainingBudgets = {};
+  double _income = 0.0;
+  double _envelopeExpenses = 0.0;
+  double _remainingEnvelope = 0.0;
 
   @override
   void initState() {
@@ -31,17 +32,25 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     if (user == null) return;
 
     try {
-      // Fetch the remaining budget for each category from Firestore
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid);
-      final envelopeDocs = await userDocRef.collection('envelopes').get();
+      DocumentSnapshot docSnapshot = await userDocRef.get();
 
+      if (docSnapshot.exists && docSnapshot.data() != null) {
+        setState(() {
+          _income = docSnapshot['income'] ?? 0.0;
+          _envelopeExpenses = docSnapshot['envelopeExpenses'] ?? 0.0;
+          _remainingEnvelope = docSnapshot['remainingEnvelope'] ?? 0.0;
+        });
+      }
+
+      // Fetch remaining budgets for each category from the "envelopes" subcollection
+      final envelopeDocs = await userDocRef.collection('envelopes').get();
       Map<String, double> fetchedBudgets = {};
       for (var doc in envelopeDocs.docs) {
         var data = doc.data();
         fetchedBudgets[data['categoryName']] = data['remainingBudget']?.toDouble() ?? 0.0;
       }
 
-      // Update state with fetched budgets
       setState(() {
         remainingBudgets = fetchedBudgets;
       });
@@ -67,7 +76,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Envelope budgeting data deleted successfully')),
       );
-      Navigator.push(context, MaterialPageRoute(builder: (context) => AddBudget(userId: '',)));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => BudgetSelectionPage()));
 
       Navigator.pop(context);
     } catch (e) {
@@ -105,7 +114,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   Widget build(BuildContext context) {
     final List<Envelope> envelopes = filteredCategories.map((category) {
       String allocatedAmount = widget.allocations[category.name]?.toString() ?? '0.0';
-      // Use fetched remaining budget if available, otherwise fallback to allocatedBudget
       String remainingAmount = remainingBudgets[category.name]?.toStringAsFixed(2) ?? allocatedAmount;
       return Envelope(category: category, allocatedBudget: allocatedAmount, remainingBudget: remainingAmount);
     }).toList();
@@ -120,8 +128,54 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Display income and frequency at the top of the screen
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Income: ₱${_income.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Remaining Income: ₱${_remainingEnvelope.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+
+                            Text(
+                              'Total Expenses: ₱${_envelopeExpenses.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+      SizedBox(height: 20),
+        Expanded(
         child: GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
@@ -160,6 +214,8 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
           },
         ),
       ),
+    ])
+    )
     );
   }
 }

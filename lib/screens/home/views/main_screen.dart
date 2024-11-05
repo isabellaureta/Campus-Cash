@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:month_picker_dialog/month_picker_dialog.dart';
 
 import '../../Profile/UserProfile.dart';
 import '../../transaction_history/TransactionHistory.dart';
@@ -14,8 +15,10 @@ import '../../transaction_history/TransactionHistory.dart';
 class MainScreen extends StatefulWidget {
   final List<Expense> expenses;
   final List<Income> incomes;
+  final List<Transaction> monthlyTransactions;  // Define the parameter here
 
-  const MainScreen({Key? key, required this.expenses, required this.incomes}) : super(key: key);
+  const MainScreen({Key? key, required this.expenses, required this.incomes, required this.monthlyTransactions,  // Add it to the constructor
+  }) : super(key: key);
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -65,15 +68,100 @@ class Transaction {
   }
 }
 
+class MonthlySummaryScreen extends StatelessWidget {
+  final List<Map<String, dynamic>> dailySummary;
+  final DateTime selectedMonth;
+
+  const MonthlySummaryScreen({
+    Key? key,
+    required this.dailySummary,
+    required this.selectedMonth,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate dynamic height for GridView based on screen size
+    double gridHeight = MediaQuery.of(context).size.height * 0.5;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Summary for ${DateFormat('MMMM yyyy').format(selectedMonth)}"),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  "Monthly Summary",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              // Wrapping GridView in a Container with calculated height
+              Container(
+                height: gridHeight, // Set the height for the GridView
+                child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(), // Disable grid scrolling
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7, // 7 columns for days of the week
+                    childAspectRatio: 1.5,
+                  ),
+                  itemCount: dailySummary.length,
+                  itemBuilder: (context, index) {
+                    final daySummary = dailySummary[index];
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.all(4.0),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Day ${daySummary['day']}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Income: \$${daySummary['income'].toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.green, fontSize: 12),
+                            ),
+                            Text(
+                              'Expense: \$${daySummary['expense'].toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.red, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 class _MainScreenState extends State<MainScreen> {
   List<Transaction> transactions = [];
   final TextEditingController _totalBalanceController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  double _totalBudget = 0;
   double _remainingBudget = 0;
   String _userName = '';
   double _totalExpenses = 0;
-
+  String? _profileImageUrl;  // Declare the profile image URL variable
 
   @override
   void initState() {
@@ -88,7 +176,8 @@ class _MainScreenState extends State<MainScreen> {
     if (user != null) {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       setState(() {
-        _userName = userDoc['name'] ?? 'John Doe';  // Set the fetched name, defaulting to 'John Doe'
+        _userName = userDoc['name'] ?? 'John Doe';  // Set the fetched name
+        _profileImageUrl = userDoc['profileImageUrl'];  // Fetch the profile image URL
       });
     }
   }
@@ -125,55 +214,50 @@ class _MainScreenState extends State<MainScreen> {
         .toList();
   }
 
-  Future<void> _saveTransaction(Transaction transaction) async {
-    User? user = _auth.currentUser;
-    if (user == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('transactions')
-        .doc(transaction.id)
-        .set(transaction.toMap());
-
-    // Recalculate total expenses
-    if (!transaction.isIncome) {
-      setState(() {
-        _totalExpenses += transaction.amount;
-      });
-    }
-  }
-
-
 
   Future<void> _fetchBudgetData() async {
     User? user = _auth.currentUser;
     if (user != null) {
+      // Check if the "budgets" collection contains a "remaining" field
       DocumentSnapshot budgetDoc = await FirebaseFirestore.instance.collection('budgets').doc(user.uid).get();
-      if (budgetDoc.exists) {
+      if (budgetDoc.exists && budgetDoc.data() != null) {
         setState(() {
-          _totalBudget = budgetDoc['budget'];
-          _remainingBudget = budgetDoc['remaining'];
+          _remainingBudget = budgetDoc['remaining'] ?? _remainingBudget;
         });
+      }
+
+      // If "remaining" is not found in "budgets" or not set, check "503020" for "remainingBudget"
+      if (_remainingBudget == 0) {  // Only check if "_remainingBudget" hasn't been set
+        DocumentSnapshot budget503020Doc = await FirebaseFirestore.instance.collection('503020').doc(user.uid).get();
+        if (budget503020Doc.exists && budget503020Doc.data() != null) {
+          setState(() {
+            _remainingBudget = budget503020Doc['remainingBudget'] ?? _remainingBudget;
+          });
+        }
+      }
+
+      // If neither "remaining" nor "remainingBudget" is found, check for "income" in "envelopeAllocations"
+      if (_remainingBudget == 0) {  // Only check if "_remainingBudget" hasn't been set
+        DocumentSnapshot envelopeDoc = await FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid).get();
+        if (envelopeDoc.exists && envelopeDoc.data() != null) {
+          setState(() {
+            _remainingBudget = envelopeDoc['remainingEnvelope'] ?? _remainingBudget;
+          });
+        }
+      }
+
+      // If no other fields are found, check for "excessMoney" in the "PayYourselfFirst" collection
+      if (_remainingBudget == 0) {  // Only check if "_remainingBudget" hasn't been set
+        DocumentSnapshot payYourselfFirstDoc = await FirebaseFirestore.instance.collection('PayYourselfFirst').doc(user.uid).get();
+        if (payYourselfFirstDoc.exists && payYourselfFirstDoc.data() != null) {
+          setState(() {
+            _remainingBudget = payYourselfFirstDoc['remainingYourself'] ?? _remainingBudget;
+          });
+        }
       }
     }
   }
 
-  /*Future<void> _handleCreateExpense(Expense expense) async {
-    final result = await _firebaseExpenseRepo.createExpense(expense);
-
-    if (result == null) {
-      // Expense created successfully, update the UI here
-      setState(() {
-        _totalExpenses += expense.amount;
-      });
-    } else {
-      // Handle any errors here
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result)),
-      );
-    }
-  }*/
 
 
   List<Transaction> _getAllTransactions() {
@@ -206,11 +290,40 @@ class _MainScreenState extends State<MainScreen> {
         ),
       );
     }
-
     transactions.sort((a, b) => b.date.compareTo(a.date));
-
     return transactions;
   }
+
+  List<Map<String, dynamic>> _generateDailySummary(DateTime month) {
+    // Determine the number of days in the selected month
+    int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+
+    // Initialize a list to store daily income and expense summaries
+    List<Map<String, dynamic>> dailySummary = List.generate(daysInMonth, (index) => {
+      'day': index + 1,
+      'income': 0.0,
+      'expense': 0.0,
+    });
+
+    // Calculate income and expenses for each day in the month
+    for (var transaction in transactions) {
+      if (transaction.date.year == month.year && transaction.date.month == month.month) {
+        int dayIndex = transaction.date.day - 1;
+
+        // Update income or expense for the specific day
+        if (transaction.isIncome) {
+          dailySummary[dayIndex]['income'] += transaction.amount;
+        } else {
+          dailySummary[dayIndex]['expense'] += transaction.amount;
+        }
+      }
+    }
+
+    return dailySummary;
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -227,35 +340,39 @@ class _MainScreenState extends State<MainScreen> {
               children: [
                 Row(
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.yellow[700],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ProfilePage(),
-                              ),
-                            ).then((_) {
-                              _fetchUserName();
-                            });                          },
-                          child: Icon(
-                            CupertinoIcons.person_fill,
-                            color: Colors.yellow[800],
-                          ),
-                        )
-                      ],
-                    ),
-                    const SizedBox(width: 8,),
+            Stack(
+            alignment: Alignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePage(),
+                      ),
+                    ).then((_) {
+                      _fetchUserName();
+                    });
+                  },
+                  child: CircleAvatar(
+                    radius: 25,
+                    backgroundColor: Colors.yellow[700],
+                    backgroundImage: _profileImageUrl != null
+                        ? NetworkImage(_profileImageUrl!)
+                        : null,
+                    child: _profileImageUrl == null
+                        ? Icon(
+                      CupertinoIcons.person_fill,
+                      color: Colors.yellow[800],
+                    )
+                        : null,
+                  ),
+                ),
+              ],
+
+            ),
+
+        const SizedBox(width: 8,),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -279,7 +396,33 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ],
                 ),
-                IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.calendar))
+                IconButton(
+                  onPressed: () async {
+                    DateTime? selectedMonth = await showMonthPicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
+                    );
+
+                    if (selectedMonth != null) {
+                      List<Map<String, dynamic>> dailySummary = _generateDailySummary(selectedMonth);
+
+                      // Navigate to MonthlySummaryScreen with daily summary
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MonthlySummaryScreen(
+                            dailySummary: dailySummary,
+                            selectedMonth: selectedMonth,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.calendar),
+                ),
+
               ],
             ),
             const SizedBox(height: 20,),
@@ -440,7 +583,7 @@ class _MainScreenState extends State<MainScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => TransactionHistory(transactions: transactions),
+                        builder: (context) => TransactionHistory(transactions: transactions, monthlyTransactions: [],),
                       ),
                     );
                   },

@@ -17,6 +17,7 @@ class _ChartScreenState extends State<ChartScreen> {
   List<ChartData> chartData = [];
   String selectedType = 'Expenses';
   Map<DateTime, double> dailyExpenseData = {};
+  Map<DateTime, double> dailyIncomeData = {};
   DateTime selectedMonth = DateTime.now();
   String selectedView = 'Monthly';
   DateTime selectedDate = DateTime.now();
@@ -43,21 +44,24 @@ class _ChartScreenState extends State<ChartScreen> {
           );
           break;
         case 'All Time':
-        // No date change for All Time view
+
           break;
       }
       generateChartData();
     });
   }
 
+
+
   void generateChartData() {
     Map<String, ChartData> aggregatedData = {};
     DateTime weekEndDate = selectedDate.add(Duration(days: 6));
 
+    dailyExpenseData = {};
+    dailyIncomeData = {};
+
     for (var expense in widget.expenses) {
       bool isIncluded = false;
-
-      // Check if the expense date matches the selected view criteria
       switch (selectedView) {
         case 'Daily':
           isIncluded = expense.date.year == selectedDate.year &&
@@ -77,9 +81,9 @@ class _ChartScreenState extends State<ChartScreen> {
           break;
       }
 
-      // Aggregate data if the date matches the selected view
       if (isIncluded) {
-        if (selectedType == 'Expenses' && expense.date != null) {
+        if (selectedType == 'Expenses') {
+
           if (aggregatedData.containsKey(expense.category.name)) {
             aggregatedData[expense.category.name]!.totalAmount += expense.amount;
           } else {
@@ -90,8 +94,42 @@ class _ChartScreenState extends State<ChartScreen> {
               expense.category.icon,
             );
           }
-        } else if (selectedType == 'Income' && expense.date != null) {
-          for (var income in widget.income) {
+        } else if (selectedType == 'Expense Flow' || selectedType == 'Transaction Analysis') {
+
+          DateTime day = DateTime(expense.date.year, expense.date.month, expense.date.day);
+          dailyExpenseData.update(
+            day,
+                (value) => value + expense.amount.toDouble(),
+            ifAbsent: () => expense.amount.toDouble(),
+          );
+        }
+      }
+    }
+
+      for (var income in widget.income) {
+        bool isIncluded = false;
+
+        switch (selectedView) {
+          case 'Daily':
+            isIncluded = income.date.year == selectedDate.year &&
+                income.date.month == selectedDate.month &&
+                income.date.day == selectedDate.day;
+            break;
+          case 'Weekly':
+            isIncluded = income.date.isAfter(selectedDate.subtract(const Duration(days: 1))) &&
+                income.date.isBefore(weekEndDate.add(const Duration(days: 1)));
+            break;
+          case 'Monthly':
+            isIncluded = income.date.year == selectedDate.year &&
+                income.date.month == selectedDate.month;
+            break;
+          case 'All Time':
+            isIncluded = true;
+            break;
+        }
+
+        if (isIncluded) {
+          if (selectedType == 'Income') {
             if (aggregatedData.containsKey(income.category2.name)) {
               aggregatedData[income.category2.name]!.totalAmount += income.amount;
             } else {
@@ -102,44 +140,30 @@ class _ChartScreenState extends State<ChartScreen> {
                 income.category2.icon,
               );
             }
+          } else if (selectedType == 'Income Flow' || selectedType == 'Transaction Analysis') {
+
+            DateTime day = DateTime(income.date.year, income.date.month, income.date.day);
+            dailyIncomeData.update(
+              day,
+                  (value) => value + income.amount.toDouble(),
+              ifAbsent: () => income.amount.toDouble(),
+            );
           }
-        } else if (selectedType == 'Expense Flow') {
-          DateTime day = DateTime(expense.date.year, expense.date.month, expense.date.day);
-          dailyExpenseData.update(
-            day,
-                (value) => value + expense.amount.toDouble(), // Convert to double
-            ifAbsent: () => expense.amount.toDouble(), // Ensure double on insertion as well
-          );
-        }
       }
     }
 
     setState(() {
-      chartData = selectedType != 'Expense Flow' ? aggregatedData.values.toList() : [];
+      chartData = (selectedType == 'Expense Flow' || selectedType == 'Income Flow' || selectedType == 'Transaction Analysis')
+          ? []
+          : aggregatedData.values.toList();
     });
   }
+
+
 
 
   double getTotalAmount() {
     return chartData.fold(0, (sum, item) => sum + item.totalAmount);
-  }
-
-  void _changeMonth(bool increment) {
-    setState(() {
-      selectedMonth = DateTime(
-        selectedMonth.year,
-        selectedMonth.month + (increment ? 1 : -1),
-      );
-
-      if (selectedMonth.month > 12) {
-        selectedMonth = DateTime(selectedMonth.year + 1, 1);
-      } else if (selectedMonth.month < 1) {
-        selectedMonth = DateTime(selectedMonth.year - 1, 12);
-      }
-
-      // Trigger data regeneration based on the new selected month
-      generateChartData();
-    });
   }
 
   @override
@@ -167,10 +191,10 @@ class _ChartScreenState extends State<ChartScreen> {
       appBar: AppBar(
         title: Text('Transaction Statistics'),
       ),
-    body: SingleChildScrollView(  // NEW: Make the content scrollable
+    body: SingleChildScrollView(
     child: Column(
     children: [
-    // Header Section (Static)
+
     Container(
     padding: const EdgeInsets.all(8.0),
       color: Colors.grey[200],
@@ -193,7 +217,6 @@ class _ChartScreenState extends State<ChartScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8.0),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -223,14 +246,12 @@ class _ChartScreenState extends State<ChartScreen> {
                   ),
                 ],
               ),
-              // Add a SizedBox for spacing between columns
-              SizedBox(width: 16.0),
               Column(
                 children: [
                   IconButton(
                     icon: Icon(Icons.filter_list, color: Colors.black),
                     onPressed: () {
-                      // Showing the PopupMenu when the filter icon is pressed
+
                       showMenu(
                         context: context,
                         position: RelativeRect.fromLTRB(100, 100, 0, 0),
@@ -255,14 +276,18 @@ class _ChartScreenState extends State<ChartScreen> {
                       ).then((value) {
                         if (value != null) {
                           setState(() {
-                            selectedView = value; // Update view based on selection
-                            _changeDate(false); // Reset date display for new view
+                            selectedView = value;
+                            if (value == 'Transaction Analysis') {
+                              selectedType = 'Transaction Analysis';
+                            } else {
+                              _changeDate(false);
+                            }
                           });
                         }
-                      });
+                      }
+                      );
                     },
                   ),
-                  Text(selectedType),
                 ],
               ),
             ],
@@ -271,12 +296,12 @@ class _ChartScreenState extends State<ChartScreen> {
       ),
     ),
 
-      SingleChildScrollView( // Make the Column scrollable
+      SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,  // Ensure Column doesn't take infinite height
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(4.0),
               child: DropdownButton<String>(
                 value: selectedType,
                 onChanged: (String? newValue) {
@@ -285,7 +310,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     generateChartData();
                   });
                 },
-                items: <String>['Expenses', 'Income', 'Expense Flow', 'Income Flow']
+                items: <String>['Expenses', 'Income', 'Expense Flow', 'Income Flow', 'Transaction Analysis']
                     .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -294,6 +319,33 @@ class _ChartScreenState extends State<ChartScreen> {
                 }).toList(),
               ),
             ),
+            if (selectedType == 'Transaction Analysis')
+              SizedBox(
+                height: 300,  // Define the height here using SizedBox
+                child: SfCartesianChart(
+                  primaryXAxis: DateTimeAxis(dateFormat: DateFormat.yMMMd()),
+                  primaryYAxis: NumericAxis(labelFormat: '\₱{value}'),
+                  legend: Legend(isVisible: true, position: LegendPosition.bottom),
+                  series: <CartesianSeries>[
+                    ColumnSeries<MapEntry<DateTime, double>, DateTime>(
+                      dataSource: dailyExpenseData.entries.toList(),
+                      xValueMapper: (MapEntry<DateTime, double> entry, _) => entry.key,
+                      yValueMapper: (MapEntry<DateTime, double> entry, _) => entry.value,
+                      color: Colors.red,
+                      name: 'Expenses',
+                    ),
+                    ColumnSeries<MapEntry<DateTime, double>, DateTime>(
+                      dataSource: dailyIncomeData.entries.toList(),
+                      xValueMapper: (MapEntry<DateTime, double> entry, _) => entry.key,
+                      yValueMapper: (MapEntry<DateTime, double> entry, _) => entry.value,
+                      color: Colors.green,
+                      name: 'Income',
+                    ),
+                  ],
+                ),
+              ),
+
+
             if (selectedType == 'Expense Flow')
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -304,7 +356,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     interval: 1,
                   ),
                   primaryYAxis: NumericAxis(
-                    labelFormat: '\₱{value}', // Show currency format
+                    labelFormat: '\₱{value}',
                   ),
                   series: <CartesianSeries>[
                     LineSeries<MapEntry<DateTime, double>, DateTime>(
@@ -316,15 +368,31 @@ class _ChartScreenState extends State<ChartScreen> {
                   ],
                 ),
               ),
+            if (selectedType == 'Income Flow')
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SfCartesianChart(
+                  primaryXAxis: DateTimeAxis(
+                    dateFormat: DateFormat.d(),
+                    intervalType: DateTimeIntervalType.days,
+                    interval: 1,
+                  ),
+                  primaryYAxis: NumericAxis(
+                    labelFormat: '\₱{value}',
+                  ),
+                  series: <CartesianSeries>[
+                    LineSeries<MapEntry<DateTime, double>, DateTime>(
+                      dataSource: dailyIncomeData.entries.toList(),
+                      xValueMapper: (MapEntry<DateTime, double> entry, _) => entry.key,
+                      yValueMapper: (MapEntry<DateTime, double> entry, _) => entry.value,
+                      markerSettings: MarkerSettings(isVisible: true),
+                    ),
+                  ],
+                ),
+              ),
             Flexible(
               child: SfCircularChart(
-                legend: const Legend(
-                  isVisible: true,
-                  position: LegendPosition.right,
-                  overflowMode: LegendItemOverflowMode.wrap,
-                  iconHeight: 18,
-                  iconWidth: 18,
-                ),
+
                 series: <CircularSeries>[
                   PieSeries<ChartData, String>(
                     dataSource: chartData,
@@ -340,44 +408,25 @@ class _ChartScreenState extends State<ChartScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 16.0),
             if (selectedType == 'Expense Flow')
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   children: [
-                    Text(
-                      "October, 2024",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                      ),
-                      itemCount: 31,
-                      itemBuilder: (context, index) {
-                        final day = DateTime(2024, 10, index + 1);
-                        final expense = dailyExpenseData[day] ?? 0.0;
-                        return Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text("${index + 1}", style: TextStyle(fontSize: 14)),
-                              Text("\$${expense.toStringAsFixed(2)}", style: TextStyle(fontSize: 12)),
-                            ],
-                          ),
-                        );
-                        },
-                    ),
+
                   ],
                 ),
               ),
+            if (selectedType == 'Income Flow')
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+
+                  ],
+                ),
+              ),
+
             ...chartData.map((data) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -403,7 +452,6 @@ class _ChartScreenState extends State<ChartScreen> {
                       ],
                     ),
                   ),
-                  SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +485,6 @@ class _ChartScreenState extends State<ChartScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 5),
                         Stack(
                           children: [
                             Container(
@@ -459,7 +506,6 @@ class _ChartScreenState extends State<ChartScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 9),
                       ],
                     ),
                   ),
@@ -479,7 +525,7 @@ class _ChartScreenState extends State<ChartScreen> {
 
 class ChartData {
   final String categoryName;
-  int totalAmount; // Changed to mutable so it can be aggregated
+  int totalAmount;
   final int color;
   final String icon;
 

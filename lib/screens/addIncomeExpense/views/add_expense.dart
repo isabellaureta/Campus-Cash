@@ -1,4 +1,8 @@
+import 'dart:developer';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +23,7 @@ class _AddExpenseState extends State<AddExpense> {
   TextEditingController expenseController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
   TextEditingController dateController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
   late Expense expense;
   bool isLoading = false;
 
@@ -29,6 +34,53 @@ class _AddExpenseState extends State<AddExpense> {
     expense.expenseId = const Uuid().v1();
     super.initState();
   }
+
+  Future<bool> checkIfBudgetExists(String userId) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Define the document references for each required budgeting technique
+    final budgetDoc = firestore.collection('budgets').doc(userId);
+    final budgetingDoc503020 = firestore.collection('503020').doc(userId);
+    final envelopeAllocationsDoc = firestore.collection('envelopeAllocations').doc(userId);
+    final payYourselfFirstDoc = firestore.collection('PayYourselfFirst').doc(userId);
+    final priorityBasedDoc = firestore.collection('PriorityBased').doc(userId);
+
+    // Check each document for existence
+    final budgetSnapshot = await budgetDoc.get();
+    final budgeting503020Snapshot = await budgetingDoc503020.get();
+    final envelopeAllocationsSnapshot = await envelopeAllocationsDoc.get();
+    final payYourselfFirstSnapshot = await payYourselfFirstDoc.get();
+    final priorityBasedSnapshot = await priorityBasedDoc.get();
+
+    // Return true if at least one budgeting technique exists, false if all are missing
+    return budgetSnapshot.exists ||
+        budgeting503020Snapshot.exists ||
+        envelopeAllocationsSnapshot.exists ||
+        payYourselfFirstSnapshot.exists ||
+        priorityBasedSnapshot.exists;
+  }
+
+
+  void showAlertDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Notice'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +279,29 @@ class _AddExpenseState extends State<AddExpense> {
                     ),
                   ),
                   const SizedBox(
+                    height: 16,
+                  ),
+                  TextFormField(
+                    controller: descriptionController,
+                    textAlignVertical: TextAlignVertical.center,
+                    maxLines: 3,  // Allows multi-line input
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: const Icon(
+                        FontAwesomeIcons.pen,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      hintText: 'Description',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(
                     height: 32,
                   ),
                   SizedBox(
@@ -236,16 +311,29 @@ class _AddExpenseState extends State<AddExpense> {
                         ? const Center(
                         child: CircularProgressIndicator())
                         : TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null) {
+                            log('No authenticated user found.');
+                            return;
+                          }
+
+                          // Check if any budget or budgeting technique document exists
+                          final expenseExists = await checkIfBudgetExists(user.uid);
+                          if (!expenseExists) {
+                            // Show alert if no budgeting technique exists
+                            showAlertDialog(context, 'Please add a Budget or Budgeting Technique first.');
+                            return;
+                          }
+
+                          // If a budget document exists, proceed with saving the expense
                           setState(() {
-                            expense.amount = int.parse(
-                                expenseController.text);
+                            expense.amount = int.parse(expenseController.text);
                           });
 
-                          context
-                              .read<CreateExpenseBloc>()
-                              .add(CreateExpense(expense));
+                          context.read<CreateExpenseBloc>().add(CreateExpense(expense));
                         },
+
                         style: TextButton.styleFrom(
                             backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(

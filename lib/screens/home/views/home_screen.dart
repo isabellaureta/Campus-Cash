@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import 'package:campuscash/screens/budget_allocation/Budget.dart';
+import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:campuscash/main.dart';
 import 'package:campuscash/screens/addIncomeExpense/blocs/create_categorybloc/create_category_bloc.dart';
@@ -8,14 +11,16 @@ import 'package:campuscash/screens/addIncomeExpense/views/add_expense.dart';
 import 'package:campuscash/screens/addIncomeExpense/views/add_income.dart';
 import 'package:campuscash/screens/home/blocs/get_IncomeExpense_bloc/get_IncomeExpense_bloc.dart';
 import 'package:campuscash/screens/home/views/main_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
-import '../../budget_allocation/addBudget.dart';
-import '../../budget_allocation/addBudgetandAllocation.dart';
-import '../../goal/addGoals.dart';
+import '../../budget_allocation/503020_records.dart';
+import '../../budget_allocation/PayYourselfFirstRecords.dart';
+import '../../budget_allocation/PriorityBasedRecords.dart';
+import '../../budget_allocation/envelope_records.dart';
 import '../../goal_loan/addGoalandLoan.dart';
 import '../../stats/stats.dart';
 
@@ -33,6 +38,89 @@ class _HomeScreenState extends State<HomeScreen> {
   int index = 0;
   Color selectedItem = Colors.blue;
   Color unselectedItem = Colors.grey;
+  User? _currentUser = FirebaseAuth.instance.currentUser;
+
+  Future<Widget> _fetchSavedData() async {
+    try {
+      if (_currentUser == null) return BudgetSelectionPage(); // Default if no user is signed in.
+
+      final userId = _currentUser!.uid;
+
+      // Check for Priority-Based budgeting data
+      final priorityBasedSnapshot = await FirebaseFirestore.instance
+          .collection('PriorityBased')
+          .doc(userId)
+          .get();
+
+      if (priorityBasedSnapshot.exists) {
+        return PriorityBasedSummary(userId: userId);
+      }
+
+      // Check for Pay-Yourself-First data
+      final payYourselfFirstSnapshot = await FirebaseFirestore.instance
+          .collection('PayYourselfFirst')
+          .doc(userId)
+          .get();
+
+      if (payYourselfFirstSnapshot.exists) {
+        return PayYourselfFirstRecords();
+      }
+
+      // Check for Envelope Budgeting data
+      final envelopeSnapshot = await FirebaseFirestore.instance
+          .collection('envelopeAllocations')
+          .doc(userId)
+          .collection('envelopes')
+          .get();
+
+      if (envelopeSnapshot.docs.isNotEmpty) {
+        final allocations = <String, double>{};
+
+        for (var doc in envelopeSnapshot.docs) {
+          var data = doc.data();
+          allocations[data['categoryName']] = (data['allocatedAmount'] as num).toDouble();
+        }
+
+        return EnvelopeBudgetingPage(allocations: allocations);
+      }
+
+      // Check for 50/30/20 budgeting data
+      final budgetSnapshot = await FirebaseFirestore.instance
+          .collection('503020')
+          .doc(userId)
+          .get();
+
+      if (budgetSnapshot.exists) {
+        final data = budgetSnapshot.data() as Map<String, dynamic>;
+        final totalBudget = data['totalBudget'] ?? 0.0;
+        final totalExpenses = data['totalExpenses'] ?? 0.0;
+        final remainingBudget = totalBudget - totalExpenses;
+
+        return BudgetSummaryPage(
+          totalBudget: totalBudget,
+          totalExpenses: totalExpenses,
+          remainingBudget: remainingBudget,
+          expenses: {
+            'Needs': data['Needs'],
+            'Wants': data['Wants'],
+            'Savings': data['Savings'],
+          },
+          userId: userId,
+        );
+      }
+
+      // If no data exists, return BudgetSelectionPage
+      return BudgetSelectionPage();
+    } catch (e) {
+      // Show error if any exception occurs
+      return Scaffold(
+        body: Center(
+          child: Text('Failed to fetch saved data: $e'),
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -73,14 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               CupertinoIcons.graph_square_fill,
                               color: index == 1 ? selectedItem : unselectedItem,
                             ),
-                            label: 'Budget',
+                            label: 'Stats',
                           ),
                           BottomNavigationBarItem(
                             icon: Icon(
                               CupertinoIcons.money_dollar_circle_fill,
                               color: index == 2 ? selectedItem : unselectedItem,
                             ),
-                            label: 'Stats',
+                            label: 'Budget',
                           ),
                           BottomNavigationBarItem(
                             icon: Icon(
@@ -202,20 +290,54 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
     );
+
+
   }
 
   Widget _buildBody(int index, List<Expense> expenses, List<Income> incomes) {
     switch (index) {
       case 0:
-        return MainScreen(expenses: expenses, incomes: incomes);
+        return MainScreen(expenses: expenses, incomes: incomes, monthlyTransactions: []);
       case 1:
         return ChartScreen(expenses: expenses, income: incomes);
       case 2:
-        return AddBudget(userId: '',);
+        return FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance.collection('budgets').get(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+              // If there are documents in the 'budgets' collection, show the Budget page
+              return Budget();
+            } else {
+              // If no budgets exist, check other budgeting techniques with _fetchSavedData
+              return FutureBuilder<Widget>(
+                future: _fetchSavedData(),  // Calls _fetchSavedData if no 'budgets' documents exist
+                builder: (context, savedDataSnapshot) {
+                  if (savedDataSnapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (savedDataSnapshot.hasData) {
+                    // Display the widget returned by _fetchSavedData
+                    return savedDataSnapshot.data!;
+                  } else {
+                    // If _fetchSavedData encounters an error, default to BudgetSelectionPage
+                    return BudgetSelectionPage();
+                  }
+                },
+              );
+            }
+          },
+        );
       case 3:
         return const CustomTabBarsPage();
       default:
         return Container();
     }
   }
+
+
 }

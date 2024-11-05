@@ -17,13 +17,12 @@ class BudgetInputPage extends StatefulWidget {
 class _BudgetInputPageState extends State<BudgetInputPage> {
   final _budgetController = TextEditingController();
 
-  String? _selectedFrequency;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Enter Budget and Frequency'),
+        title: Text('Enter Budget'),
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('503020').doc(widget.userId).get(),
@@ -61,49 +60,22 @@ class _BudgetInputPageState extends State<BudgetInputPage> {
                   ),
                 ),
                 SizedBox(height: 16.0),
-                DropdownButtonFormField<String>(
-                  value: _selectedFrequency,
-                  hint: Text('Select Frequency'),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'Weekly',
-                      child: Text('Weekly'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Bi-Weekly',
-                      child: Text('Every 15th of the Month'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Monthly',
-                      child: Text('Monthly'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    _selectedFrequency = value;
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Budget Frequency',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                SizedBox(height: 16.0),
                 ElevatedButton(
                   onPressed: () {
-                    if (_budgetController.text.isNotEmpty && _selectedFrequency != null) {
+                    if (_budgetController.text.isNotEmpty) {
                       double totalBudget = double.parse(_budgetController.text);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => Budget503020Page(
                             totalBudget: totalBudget,
-                            frequency: _selectedFrequency!,
                             userId: widget.userId,
                           ),
                         ),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Please enter a budget and select a frequency')),
+                        SnackBar(content: Text('Please enter a budget')),
                       );
                     }
                   },
@@ -120,10 +92,9 @@ class _BudgetInputPageState extends State<BudgetInputPage> {
 
 class Budget503020Page extends StatefulWidget {
   final double totalBudget;
-  final String frequency;
   final String userId;
 
-  Budget503020Page({required this.totalBudget, required this.frequency, required this.userId});
+  Budget503020Page({required this.totalBudget, required this.userId});
 
   @override
   _Budget503020PageState createState() => _Budget503020PageState();
@@ -262,14 +233,23 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     final firestore = FirebaseFirestore.instance;
     final userDocRef = firestore.collection('503020').doc(userId);
 
-    // Save basic budget info
+    // Attempt to fetch the document to check for existence
+    final snapshot = await userDocRef.get();
+
+    // Initialize totalBudget and totalExpenses based on existing document or default values
+    final totalBudget = snapshot.exists ? (snapshot['totalBudget'] ?? widget.totalBudget) : widget.totalBudget;
+    final totalExpenses = snapshot.exists ? (snapshot['totalExpenses'] ?? 0.0) : 0.0;
+
+    // Calculate remainingBudget based on totalBudget and totalExpenses
+    final calculatedRemainingBudget = totalBudget - totalExpenses;
+
+    // Save basic budget info with updated remainingBudget
     await userDocRef.set({
       'userId': userId,
-      'totalBudget': widget.totalBudget,
-      'frequency': widget.frequency,
-      'totalExpenses': 0.0,  // Initialize to 0
-      'remainingBudget': widget.totalBudget - _totalExpenses,
-    });
+      'totalBudget': totalBudget,
+      'totalExpenses': totalExpenses,                 // Preserve totalExpenses as fetched
+      'remainingBudget': calculatedRemainingBudget,   // Update calculated remainingBudget
+    }, SetOptions(merge: true));  // Use merge to avoid overwriting other fields
 
     // Save Needs categories with user-input amounts
     final needsCollectionRef = userDocRef.collection('Needs');
@@ -325,14 +305,15 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       MaterialPageRoute(
         builder: (context) => BudgetSummaryPage(
           userId: userId,
-          totalExpenses: _totalExpenses,
-          remainingBudget: widget.totalBudget - _totalExpenses,
-          totalBudget: widget.totalBudget,
+          totalExpenses: totalExpenses,
+          remainingBudget: calculatedRemainingBudget,
+          totalBudget: totalBudget,
           expenses: _expenses,
         ),
       ),
     );
   }
+
 
   Future<void> _adjustTotalBudgetAfterExpense(String categoryName, double amount) async {
     final userId = widget.userId;
@@ -467,10 +448,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
         children: [
           Text(
             'Total Budget: ₱${widget.totalBudget.toStringAsFixed(2)}',
-            style: TextStyle(fontSize: 16),
-          ),
-          Text(
-            'Frequency: ${widget.frequency}',
             style: TextStyle(fontSize: 16),
           ),
           Text(

@@ -3,7 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 
+
+import '../home/views/welcome_view.dart';
 import 'Notifications.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -16,7 +19,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   bool _notificationsEnabled = false;
   String? _profileImageUrl;
   File? _imageFile;
@@ -49,11 +52,11 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _updateUserProfile() async {
+   _updateUserProfile() async {
     User? user = _auth.currentUser;
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).update({
-        'name': _nameController.text,  // Update the user's name in Firebase
+        'name': _nameController.text,
         'profileImageUrl': _profileImageUrl,
         'notificationsEnabled': _notificationsEnabled,
         'notificationHour': _selectedTime.hour,
@@ -70,31 +73,79 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-
-  void _changePassword() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      user.updatePassword(_passwordController.text);
-    }
-  }
-
   void _deleteAccount() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).delete();
-      user.delete();
-    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Account'),
+          content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                User? user = _auth.currentUser;
+                if (user != null) {
+                  try {
+                    await _firestore.collection('users').doc(user.uid).delete();
+                    await user.delete();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => WelcomeView()),
+                          (route) => false,
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete account: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
+
+
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        _profileImageUrl = null; // Reset the URL since a new image is picked
+        _profileImageUrl = null;
       });
+
+      String fileName = pickedFile.name;
+      try {
+        TaskSnapshot snapshot = await _storage.ref('profile_images/$fileName').putFile(_imageFile!);
+
+        String downloadUrl = await snapshot.ref.getDownloadURL();
+
+        setState(() {
+          _profileImageUrl = downloadUrl;
+        });
+
+        await _updateUserProfile(); // Correctly calling the update method
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: $e')),
+        );
+      }
     }
   }
+
+
+
 
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -164,7 +215,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton(
               onPressed: _deleteAccount,
               child: Text('Delete Account'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             ),
           ],
         ),

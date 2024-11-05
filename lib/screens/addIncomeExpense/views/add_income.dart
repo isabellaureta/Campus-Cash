@@ -1,5 +1,9 @@
+import 'dart:developer';
+
 import 'package:campuscash/screens/addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,6 +33,53 @@ class _AddIncomeState extends State<AddIncome> {
     income.incomeId = const Uuid().v1();
     super.initState();
   }
+
+  Future<bool> checkIfBudgetExists(String userId) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Define the document references for each required budget technique
+    final budgetDoc = firestore.collection('budgets').doc(userId);
+    final budgetingDoc503020 = firestore.collection('503020').doc(userId);
+    final envelopeAllocationsDoc = firestore.collection('envelopeAllocations').doc(userId);
+    final payYourselfFirstDoc = firestore.collection('PayYourselfFirst').doc(userId);
+    final priorityBasedDoc = firestore.collection('PriorityBased').doc(userId);
+
+    // Check each document for existence
+    final budgetSnapshot = await budgetDoc.get();
+    final budgeting503020Snapshot = await budgetingDoc503020.get();
+    final envelopeAllocationsSnapshot = await envelopeAllocationsDoc.get();
+    final payYourselfFirstSnapshot = await payYourselfFirstDoc.get();
+    final priorityBasedSnapshot = await priorityBasedDoc.get();
+
+    // Return true if at least one budgeting technique exists, false if all are missing
+    return budgetSnapshot.exists ||
+        budgeting503020Snapshot.exists ||
+        envelopeAllocationsSnapshot.exists ||
+        payYourselfFirstSnapshot.exists ||
+        priorityBasedSnapshot.exists;
+  }
+
+
+  void showAlertDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Notice'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -236,16 +287,30 @@ class _AddIncomeState extends State<AddIncome> {
                         ? const Center(
                         child: CircularProgressIndicator())
                         : TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null) {
+                            log('No authenticated user found.');
+                            return;
+                          }
+
+                          // Check if any budget or budgeting technique document exists
+                          final budgetExists = await checkIfBudgetExists(user.uid);
+                          if (!budgetExists) {
+                            // Show alert if no budgeting technique exists
+                            showAlertDialog(context, 'Please add a Budget or Budgeting Technique first.');
+                            return;
+                          }
+
+                          // If a budget document exists, proceed with saving the income
                           setState(() {
-                            income.amount = int.parse(
-                                incomeController.text);
+                            income.amount = int.parse(incomeController.text);
                           });
 
-                          context
-                              .read<CreateIncomeBloc>()
-                              .add(CreateIncome(income));
+                          context.read<CreateIncomeBloc>().add(CreateIncome(income));
                         },
+
+
                         style: TextButton.styleFrom(
                             backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(

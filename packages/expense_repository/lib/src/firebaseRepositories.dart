@@ -53,28 +53,24 @@ class FirebaseExpenseRepo implements ExpenseRepository {
           .doc(updatedExpense.expenseId)
           .set(updatedExpense.toEntity().toDocument());
 
-      // Deduct the expense from the category in the 503020 budget system
-      final categoryDeducted = await _deductExpenseFromCategory(user.uid, updatedExpense.category.categoryId, updatedExpense.amount);
+      // Update total envelope expenses and remaining envelope amount in envelopeAllocations
+      await _updateEnvelopeExpenses(user.uid, updatedExpense.amount.toDouble());
 
-      // Deduct from the PayYourselfFirst budget system
+      // Attempt deductions, but do not throw errors if documents are missing
+      await _deductExpenseFromCategory(user.uid, updatedExpense.category.categoryId, updatedExpense.amount);
       await _deductFromPayYourselfFirst(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
-
       await _deductFromRemainingBudget(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
-
       await _deductFromOverallRemainingBudget(user.uid, updatedExpense.amount.toDouble());
 
-      if (!categoryDeducted) {
-        return 'No matched category in your budget';
-      } else {
-        log('Expense created and budget updated successfully.');
-        return null;
-      }
+      log('Expense created and budget updated successfully.');
+      return null;
 
     } catch (e) {
       log('Failed to create expense: ${e.toString()}');
-      rethrow;
+      return 'Failed to create expense: ${e.toString()}';
     }
   }
+
 
   Future<void> _deductFromOverallRemainingBudget(String userId, double expenseAmount) async {
     final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(userId);
@@ -82,107 +78,89 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
     if (budgetSnapshot.exists) {
       final currentRemaining = budgetSnapshot.data()?['remaining'] ?? 0.0;
-
-      // Ensure the remaining budget doesn't go below zero
       final newRemaining = (currentRemaining - expenseAmount).clamp(0.0, double.infinity);
 
-      // Update the remaining field in the budget document
       await budgetDoc.update({
         'remaining': newRemaining,
       });
+      log('Remaining budget updated in overall budget document.');
     } else {
-      throw Exception('No budget found for the user.');
+      log('No overall budget found for the user. Skipping overall budget deduction.');
     }
   }
 
-
-
   Future<void> _deductFromPayYourselfFirst(String userId, String categoryId, double expenseAmount) async {
     try {
-      final payYourselfFirstDocRef = FirebaseFirestore.instance
-          .collection('PayYourselfFirst')
-          .doc(userId);
+      final payYourselfFirstDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
 
-      // Run the deduction in a Firestore transaction
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final payYourselfFirstSnapshot = await transaction.get(payYourselfFirstDocRef);
 
         if (payYourselfFirstSnapshot.exists) {
-          // Get the current allocations for the user
           Map<String, dynamic> allocations = payYourselfFirstSnapshot.get('allocations') as Map<String, dynamic>;
+          double yourselfExpenses = payYourselfFirstSnapshot.get('yourselfExpenses') ?? 0.0;
+          double excessMoney = payYourselfFirstSnapshot.get('excessMoney') ?? 0.0;
 
           if (allocations.containsKey(categoryId)) {
-            // Retrieve the current allocated amount
             double allocatedAmount = allocations[categoryId]['amount'] ?? 0.0;
-
-            // Calculate the new allocated amount after deduction
-            double updatedAllocatedAmount = allocatedAmount - expenseAmount;
-            if (updatedAllocatedAmount < 0) updatedAllocatedAmount = 0.0;  // Prevent negative amount
-
-            // Update the Firestore document with the new allocated amount
+            double updatedAllocatedAmount = (allocatedAmount - expenseAmount).clamp(0.0, double.infinity);
             allocations[categoryId]['amount'] = updatedAllocatedAmount;
 
-            // Perform the transaction update
+            // Update yourselfExpenses and remainingYourself
+            yourselfExpenses += expenseAmount;
+            double remainingYourself = excessMoney - yourselfExpenses;
+
             transaction.update(payYourselfFirstDocRef, {
               'allocations': allocations,
+              'yourselfExpenses': yourselfExpenses,
+              'remainingYourself': remainingYourself,
             });
 
             log('PayYourselfFirst budget updated for category $categoryId: New Amount = $updatedAllocatedAmount');
+            log('Updated yourselfExpenses = $yourselfExpenses, remainingYourself = $remainingYourself');
           } else {
-            log('Category with ID $categoryId not found in PayYourselfFirst.');
+            log('Category with ID $categoryId not found in PayYourselfFirst allocations.');
           }
         } else {
-          log('No PayYourselfFirst document found for user $userId.');
+          log('No PayYourselfFirst document found for user $userId. Skipping PayYourselfFirst deduction.');
         }
       });
     } catch (e) {
       log('Failed to deduct from PayYourselfFirst budget for category $categoryId: ${e.toString()}');
-      rethrow;
     }
   }
-
-
-
 
 
   Future<bool> _deductExpenseFromCategory(String userId, String categoryId, int expenseAmount) async {
     try {
       final budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
-
-      // Iterate through each subcollection (Needs, Wants, Savings) to find the matching categoryId
       final subcollections = ['Needs', 'Wants', 'Savings'];
 
       for (String subcollection in subcollections) {
         final categoryDoc = await budgetDocRef.collection(subcollection).doc(categoryId).get();
 
         if (categoryDoc.exists) {
-          // If the categoryId is found, deduct the expense amount from the category's budget
           Map<String, dynamic> categoryData = categoryDoc.data() as Map<String, dynamic>;
           double currentAmount = categoryData['amount'] ?? 0.0;
+          double updatedAmount = (currentAmount - expenseAmount).clamp(0.0, double.infinity);
 
-          double updatedAmount = currentAmount - expenseAmount;
-          if (updatedAmount < 0) updatedAmount = 0; // Ensure it doesn't go negative
-
-          // Update the category document with the new amount
           await budgetDocRef.collection(subcollection).doc(categoryId).update({
             'amount': updatedAmount,
           });
 
-          // Update the totalExpenses field in the main 503020 document
           await _updateTotalExpenses(userId, expenseAmount);
-
           log('Category budget updated successfully for $categoryId in $subcollection.');
-          return true; // Return true if deduction was successful
+          return true;
         }
       }
-      // Return false if no matching categoryId is found
+      log('No matching category found for category ID $categoryId in 503020 budget.');
       return false;
-
     } catch (e) {
       log('Failed to update budget for category $categoryId: ${e.toString()}');
-      rethrow;
+      return false;
     }
   }
+
 
   Future<void> _updateTotalExpenses(String userId, int expenseAmount) async {
     final budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
@@ -242,6 +220,38 @@ class FirebaseExpenseRepo implements ExpenseRepository {
       rethrow;
     }
   }
+
+  Future<void> _updateEnvelopeExpenses(String userId, double expenseAmount) async {
+    final userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(userId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final userSnapshot = await transaction.get(userDocRef);
+
+      if (userSnapshot.exists) {
+        // Get the current envelopeExpenses and income
+        double currentEnvelopeExpenses = userSnapshot.get('envelopeExpenses') ?? 0.0;
+        double income = userSnapshot.get('income') ?? 0.0;
+
+        // Update envelopeExpenses and calculate remainingEnvelope
+        double updatedEnvelopeExpenses = currentEnvelopeExpenses + expenseAmount;
+        double remainingEnvelope = income - updatedEnvelopeExpenses;
+
+        // Ensure remainingEnvelope doesn't go below zero
+        if (remainingEnvelope < 0) remainingEnvelope = 0.0;
+
+        // Update Firestore with the new envelopeExpenses and remainingEnvelope
+        transaction.update(userDocRef, {
+          'envelopeExpenses': updatedEnvelopeExpenses,
+          'remainingEnvelope': remainingEnvelope,
+        });
+
+        log('Updated envelopeExpenses to $updatedEnvelopeExpenses and remainingEnvelope to $remainingEnvelope for user $userId.');
+      } else {
+        log('User document not found in envelopeAllocations for user $userId.');
+      }
+    });
+  }
+
 
 
   @override
@@ -340,31 +350,29 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
 
   Future<void> _updateRemainingBudget(String userId, int incomeAmount) async {
     try {
-      DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
-          .collection('budgets')
-          .doc(userId)
-          .get();
+      // Await the get() method to retrieve the actual DocumentSnapshot
+      final DocumentSnapshot<Map<String, dynamic>> budgetSnapshot =
+      await FirebaseFirestore.instance.collection('budgets').doc(userId).get();
 
-      if (budgetDoc.exists) {
-        Map<String, dynamic> budgetData = budgetDoc.data() as Map<String, dynamic>;
+      if (budgetSnapshot.exists) {
+        Map<String, dynamic> budgetData = budgetSnapshot.data() as Map<String, dynamic>;
         double currentRemaining = budgetData['remaining'] ?? 0.0;
 
         double updatedRemaining = currentRemaining + incomeAmount;
 
-        await FirebaseFirestore.instance
-            .collection('budgets')
-            .doc(budgetDoc.id)
-            .update({'remaining': updatedRemaining});
+        await FirebaseFirestore.instance.collection('budgets').doc(userId).update({
+          'remaining': updatedRemaining,
+        });
 
         log('Remaining budget updated successfully after adding income.');
       } else {
-        throw Exception('Budget document not found.');
+        log('Budget document not found. Skipping update for remaining budget.');
       }
     } catch (e) {
       log('Failed to update remaining budget: ${e.toString()}');
-      rethrow;
     }
   }
+
 
   @override
   Future<void> deleteCategory2(Category2 category2) async {

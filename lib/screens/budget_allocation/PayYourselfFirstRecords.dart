@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'addBudgetandAllocation.dart';
+import 'BudgetSelectionPage.dart';
+
 
 class PayYourselfFirstRecords extends StatefulWidget {
   @override
@@ -18,21 +19,18 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
     _record = _fetchRecord();  // Fetch the record on initialization
   }
 
-  // Fetch the saved record from Firestore for the current user
   Future<Map<String, dynamic>?> _fetchRecord() async {
     User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;  // No user logged in
+    if (user == null) return null;
 
-    // Fetch the Pay-Yourself-First record for the current user
     DocumentSnapshot snapshot = await FirebaseFirestore.instance
         .collection('PayYourselfFirst')
         .doc(user.uid)
         .get();
 
     if (snapshot.exists) {
-      // Include document ID with the returned data
       Map<String, dynamic> recordData = snapshot.data() as Map<String, dynamic>;
-      recordData['id'] = snapshot.id; // Store document ID
+      recordData['id'] = snapshot.id;
       return recordData;
     }
     return null;
@@ -50,7 +48,7 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
         SnackBar(content: Text('Record deleted successfully')),
       );
 
-      Navigator.pop(context);  // Navigate back after deletion
+      Navigator.push(context, MaterialPageRoute(builder: (context) => BudgetSelectionPage()));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete record: $e')),
@@ -114,14 +112,10 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text(
-                                'Income Type: ${record['incomeType']}',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
                               IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
+                                icon: Icon(Icons.settings, color: Colors.red),
                                 onPressed: () => _confirmDelete(record['id']),
                               ),
                             ],
@@ -130,7 +124,9 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                           Text('Total Income: ₱${record['totalIncome'].toStringAsFixed(2)}'),
                           Text('Total Savings: ₱${record['totalSavings'].toStringAsFixed(2)}'),
                           Text('Excess Money: ₱${record['excessMoney'].toStringAsFixed(2)}'),
-                          Text('Frequency: ${record['incomeType']}'),
+                          Text('Total Expenses: ₱${record['yourselfExpenses'].toStringAsFixed(2)}'),
+                          Text('Remaining Income: ₱${record['remainingYourself'].toStringAsFixed(2)}'),
+
                           Divider(),
                           Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ListView.builder(

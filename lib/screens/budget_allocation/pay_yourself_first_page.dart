@@ -13,7 +13,6 @@ class PayYourselfFirstPage extends StatefulWidget {
 class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   TextEditingController incomeController = TextEditingController();
   TextEditingController percentController = TextEditingController();
-  String incomeType = 'Monthly';
   double totalSavings = 0.0;
   double excessMoney = 0.0;
 
@@ -44,23 +43,15 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
       // Parse and validate inputs
       final income = double.parse(incomeController.text);
       final percent = double.parse(percentController.text);
-      double savings = 0.0;
 
-      // Calculate savings based on income type
-      if (incomeType == 'Weekly') {
-        savings = income * (percent / 100);
-      } else if (incomeType == 'Every 15th of the Month') {
-        savings = income * (percent / 100);
-      } else {
-        savings = income * (percent / 100);
-      }
+      // Calculate savings based on percent of income
+      final savings = income * (percent / 100);
 
       setState(() {
         totalSavings = savings;
         excessMoney = income - savings;
         showResult = true;
       });
-
     } catch (e) {
       // Show an error if parsing fails
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,7 +60,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
     }
   }
 
-
   void _allocate(String category, String amount) {
     setState(() {
       allocations[category] = amount;
@@ -77,7 +67,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
           allocations.values.fold(0.0, (sum, amount) => sum + (double.tryParse(amount) ?? 0.0));
     });
   }
-
 
   void _navigateToShowAllocation() {
     Navigator.push(
@@ -88,8 +77,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
           controllers: _controllers,
           excessMoney: excessMoney,
           totalSavings: totalSavings,
-          totalIncome: double.parse(incomeController.text),
-          incomeType: incomeType,
           allocate: _allocate,
         ),
       ),
@@ -118,21 +105,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
               controller: incomeController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: 'Income'),
-            ),
-            DropdownButton<String>(
-              value: incomeType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  incomeType = newValue!;
-                });
-              },
-              items: <String>['Monthly', 'Weekly', 'Every 15th']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
             ),
             TextField(
               controller: percentController,
@@ -171,8 +143,6 @@ class ShowAllocationPage extends StatefulWidget {
   final Map<String, TextEditingController> controllers;
   final double excessMoney;
   final double totalSavings;
-  final double totalIncome;
-  final String incomeType;
   final Function(String, String) allocate;
 
   ShowAllocationPage({
@@ -180,8 +150,6 @@ class ShowAllocationPage extends StatefulWidget {
     required this.controllers,
     required this.excessMoney,
     required this.totalSavings,
-    required this.totalIncome,
-    required this.incomeType,
     required this.allocate,
   });
 
@@ -247,11 +215,9 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
 
       Map<String, dynamic> allocationsData = {};
 
-      // Iterate through the allocations and map category names to their categoryId from predefinedCategories
       for (var entry in allocations.entries) {
         double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
 
-        // Find the corresponding category in predefinedCategories based on the name
         final category = predefinedCategories.firstWhere(
               (cat) => cat.name == entry.key,
           orElse: () => throw Exception('Category not found: ${entry.key}'),
@@ -259,17 +225,17 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
 
         allocationsData[category.categoryId] = {
           'categoryName': category.name,
-          'categoryId': category.categoryId,  // Use the actual categoryId from predefinedCategories
+          'categoryId': category.categoryId,
           'amount': allocatedAmount,
-          'icon': category.icon ?? 'assets/${category.name.toLowerCase()}.png',  // Assuming icon is provided in category
+          'icon': category.icon ?? 'assets/${category.name.toLowerCase()}.png',
         };
       }
 
       await userDocRef.set({
-        'incomeType': widget.incomeType,
-        'totalIncome': widget.totalIncome,
         'totalSavings': widget.totalSavings,
         'excessMoney': widget.excessMoney,
+        'yourselfExpenses': 0.0, // Initialize yourselfExpenses to 0.0
+        'remainingYourself': widget.excessMoney, // Set remainingYourself initially as excessMoney
         'allocations': allocationsData,
       });
 
@@ -277,7 +243,6 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         SnackBar(content: Text('Allocations saved successfully!')),
       );
 
-      // Navigate to PayYourselfFirstRecords
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),

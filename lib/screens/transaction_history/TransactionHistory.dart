@@ -9,8 +9,10 @@ enum TransactionFilter { thisWeek, thisMonth, allTime }
 
 class TransactionHistory extends StatefulWidget {
   final List<Transaction> transactions;
+  final List<Transaction> monthlyTransactions;
 
-  const TransactionHistory({Key? key, required this.transactions}) : super(key: key);
+
+  const TransactionHistory({Key? key, required this.transactions, required this.monthlyTransactions,}) : super(key: key);
 
   @override
   _TransactionHistoryState createState() => _TransactionHistoryState();
@@ -18,6 +20,7 @@ class TransactionHistory extends StatefulWidget {
 
 class _TransactionHistoryState extends State<TransactionHistory> {
   TransactionFilter _selectedFilter = TransactionFilter.allTime;
+  DateTime? _selectedDay;
 
   @override
   Widget build(BuildContext context) {
