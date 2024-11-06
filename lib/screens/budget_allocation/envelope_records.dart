@@ -20,6 +20,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   double _income = 0.0;
   double _envelopeExpenses = 0.0;
   double _remainingEnvelope = 0.0;
+  Set<String> _alertedCategories = {}; // Tracks categories that have already triggered an alert
 
   @override
   void initState() {
@@ -43,7 +44,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         });
       }
 
-      // Fetch remaining budgets for each category from the "envelopes" subcollection
       final envelopeDocs = await userDocRef.collection('envelopes').get();
       Map<String, double> fetchedBudgets = {};
       for (var doc in envelopeDocs.docs) {
@@ -54,11 +54,48 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       setState(() {
         remainingBudgets = fetchedBudgets;
       });
+
+      // Check for any category that is near the limit
+      _checkBudgetLimits();
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch remaining budgets: $e')),
       );
     }
+  }
+
+
+  void _checkBudgetLimits() {
+    widget.allocations.forEach((categoryName, allocatedBudget) {
+      final remaining = remainingBudgets[categoryName] ?? allocatedBudget;
+
+      // Show alert if remaining budget is within 20% of the allocated budget and hasn't been shown yet
+      if (remaining <= 0.2 * allocatedBudget && !_alertedCategories.contains(categoryName)) {
+        _alertedCategories.add(categoryName); // Mark this category as alerted
+        _showLimitAlert(categoryName);
+      }
+    });
+  }
+
+  void _showLimitAlert(String categoryName) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('Budget Limit Alert'),
+            content: Text("You're almost at your limit for $categoryName!"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   Future<void> _deleteEnvelopeData() async {
@@ -200,13 +237,14 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Allocated: \₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 13),
+                      'Remaining: \₱${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 15),
                     ),
                     Text(
-                      'Remaining: \₱${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 13),
+                      'Allocated: \₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 12),
                     ),
+
                   ],
                 ),
               ),

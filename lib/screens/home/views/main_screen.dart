@@ -426,146 +426,66 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
             const SizedBox(height: 20,),
-            Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.width / 2,
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                      Theme.of(context).colorScheme.tertiary,
-                    ],
-                    transform: const GradientRotation(pi / 4),
-                  ),
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                        blurRadius: 4,
-                        color: Colors.grey.shade300,
-                        offset: const Offset(5, 5)
-                    )
-                  ]
+
+
+          Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.width * 0.4,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary,
+                  Theme.of(context).colorScheme.tertiary,
+                ],
+                transform: const GradientRotation(pi / 4),
               ),
-
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 4,
+                  color: Colors.grey.shade300,
+                  offset: const Offset(5, 5),
+                )
+              ],
+            ),
+            child: SingleChildScrollView(
               child: Column(
-
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 17),
                   const Text(
                     'Total Budget',
                     style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600
+                      fontSize: 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     '₱${_remainingBudget.toStringAsFixed(2)}',
                     style: const TextStyle(
-                        fontSize: 40,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold
+                      fontSize: 40,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 10),
-
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 25,
-                              height: 25,
-                              decoration: const BoxDecoration(
-                                  color: Colors.white30,
-                                  shape: BoxShape.circle
-                              ),
-                              child: const Center(
-                                  child: Icon(
-                                    CupertinoIcons.arrow_up,
-                                    size: 12,
-                                    color: Colors.greenAccent,
-                                  )
-                              ),
-                            ),
-                            const Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  ' Income',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w400
-                                  ),
-                                ),
-                                Text(
-                                  '00.00',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 25,
-                              height: 25,
-                              decoration: const BoxDecoration(
-                                color: Colors.white30,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  CupertinoIcons.arrow_down,
-                                  size: 12,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Column(  // Remove the const here, since _totalExpenses is dynamic
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Expenses',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                Text(
-                                  '₱${_totalExpenses.toStringAsFixed(2)}',  // No const here, dynamic content
-                                  style: const TextStyle(  // const is fine here for static values
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        )
-
-                      ],
+                      children: [],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+          ),
+
+
+          const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

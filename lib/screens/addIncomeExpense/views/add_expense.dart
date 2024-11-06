@@ -27,6 +27,12 @@ class _AddExpenseState extends State<AddExpense> {
   late Expense expense;
   bool isLoading = false;
 
+  bool isRecurring = false;
+  String selectedFrequency = 'Weekly';
+  TextEditingController startDateController = TextEditingController();
+  TextEditingController endDateController = TextEditingController();
+  bool noEndDate = false;
+
   @override
   void initState() {
     dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
@@ -142,6 +148,7 @@ class _AddExpenseState extends State<AddExpense> {
                   const SizedBox(
                     height: 32,
                   ),
+
                   TextFormField(
                     controller: categoryController,
                     textAlignVertical: TextAlignVertical.center,
@@ -301,9 +308,102 @@ class _AddExpenseState extends State<AddExpense> {
                     ),
                   ),
 
-                  const SizedBox(
-                    height: 32,
+                  CheckboxListTile(
+                    title: Text("Set as recurring"),
+                    value: isRecurring,
+                    onChanged: (value) {
+                      setState(() {
+                        isRecurring = value ?? false;
+                      });
+                    },
                   ),
+
+                  if (isRecurring) ...[
+                    DropdownButtonFormField<String>(
+                      value: selectedFrequency,
+                      items: [
+                        'Daily',
+                        'Weekly',
+                        'Semi-monthly',
+                        'Monthly',
+                        'Quarterly',
+                        'Semi-annually',
+                        'Annually'
+                      ]
+                          .map((frequency) => DropdownMenuItem(
+                        value: frequency,
+                        child: Text(frequency),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedFrequency = value!;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Frequency',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+
+                    // Start Date Picker
+                    TextFormField(
+                      controller: startDateController,
+                      readOnly: true,
+                      onTap: () async {
+                        DateTime? newStartDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2100),
+                        );
+                        if (newStartDate != null) {
+                          startDateController.text =
+                              DateFormat('dd/MM/yyyy').format(newStartDate);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Starts on',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+
+                    // End Date Picker
+                    TextFormField(
+                      controller: endDateController,
+                      readOnly: true,
+                      enabled: !noEndDate,
+                      onTap: () async {
+                        DateTime? newEndDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2100),
+                        );
+                        if (newEndDate != null) {
+                          endDateController.text =
+                              DateFormat('dd/MM/yyyy').format(newEndDate);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Ends on',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    CheckboxListTile(
+                      title: Text("Set end date to never"),
+                      value: noEndDate,
+                      onChanged: (value) {
+                        setState(() {
+                          noEndDate = value ?? false;
+                        });
+                      },
+                    ),
+                  ],
+
                   SizedBox(
                     width: double.infinity,
                     height: kToolbarHeight,

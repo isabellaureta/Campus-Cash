@@ -19,11 +19,14 @@ class BudgetSummaryPage extends StatefulWidget {
 
 class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Set<String> _alertedCategories = {}; // Track categories that have already triggered an alert
+
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this); // TabController for Needs, Wants, Savings
+    Set<String> _alertedCategories = {}; // Track categories that have already triggered an alert
   }
 
   // Fetch budget data from Firestore
@@ -59,6 +62,10 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final totalWantsDeductions = await _fetchTotalDeductions(userDocRef, 'Wants');
     final totalSavingsDeductions = await _fetchTotalDeductions(userDocRef, 'Savings');
 
+    _checkCategoryLimits(needsCategories, 'Needs');
+    _checkCategoryLimits(wantsCategories, 'Wants');
+    _checkCategoryLimits(savingsCategories, 'Savings');
+
     return {
       'budgetData': budgetData,
       'needsCategories': needsCategories,
@@ -73,6 +80,36 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     return totalDeductionsDoc.exists ? totalDeductionsDoc['totalDeductions'] ?? 0.0 : 0.0;
   }
 
+  void _checkCategoryLimits(List<dynamic> categories, String categoryType) {
+    for (var category in categories) {
+      final categoryBudget = category['amount'] ?? 0.0;
+      final remainingAmount = categoryBudget - (category['deductions'] ?? 0.0);
+
+      // If remaining is within 20% of budget and hasn't already been alerted, show alert
+      if (remainingAmount <= 0.2 * categoryBudget && !_alertedCategories.contains(category['name'])) {
+        _alertedCategories.add(category['name']); // Mark as alerted
+        _showLimitAlert(category['name'], categoryType); // Trigger the alert dialog
+      }
+    }
+  }
+
+  void _showLimitAlert(String categoryName, String categoryType) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Budget Limit Alert'),
+          content: Text("You're almost at your limit for $categoryType: $categoryName!"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
   // Widget to display the category list
   Widget _buildCategoryList(List<dynamic> categories) {
     if (categories.isEmpty) {
@@ -193,7 +230,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'delete') {
-                _confirmDelete(); // Show confirmation dialog to delete the budget
+                _confirmDelete();
               }
             },
             itemBuilder: (BuildContext context) {
@@ -204,7 +241,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                 ),
               ];
             },
-            icon: Icon(Icons.settings), // Settings icon for menu options
+            icon: Icon(Icons.settings),
           ),
         ],
         bottom: TabBar(
@@ -234,8 +271,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
 
           final totalBudget = budgetData['totalBudget'] ?? 0.0;
           final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
-          final remainingBudget = budgetData['remainingBudget'] ?? 0.0;  // Use remainingBudget from Firestore
-          final totalDeductions = snapshot.data!['totalDeductions'] ?? 0.0;  // Total expenses made
+          final remainingBudget = budgetData['remainingBudget'] ?? 0.0;
 
           return Column(
             children: [
@@ -248,15 +284,12 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                       'Total Budget: ₱${totalBudget.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
-
                     SizedBox(height: 8.0),
-                    // Display total expenses made
                     Text(
                       'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
-                    // Display remaining budget from Firestore
                     Text(
                       'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),

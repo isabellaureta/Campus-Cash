@@ -12,6 +12,8 @@ class PayYourselfFirstRecords extends StatefulWidget {
 
 class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
   late Future<Map<String, dynamic>?> _record;  // Fetch the user's record
+  final Set<String> _alertedCategories = {}; // Track categories that have shown alerts
+
 
   @override
   void initState() {
@@ -31,9 +33,44 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
     if (snapshot.exists) {
       Map<String, dynamic> recordData = snapshot.data() as Map<String, dynamic>;
       recordData['id'] = snapshot.id;
+
+      _checkCategoryLimits(recordData['allocations']);
       return recordData;
     }
     return null;
+  }
+
+  void _checkCategoryLimits(Map<String, dynamic> allocations) {
+    allocations.forEach((categoryName, allocationDetails) {
+      double allocatedAmount = (allocationDetails['amount'] ?? 0.0).toDouble();
+      double remainingAmount = (allocationDetails['remainingBudget'] ?? allocatedAmount).toDouble();
+
+      // If within 20% of allocated budget and hasn't been alerted before, show alert
+      if (remainingAmount <= 0.2 * allocatedAmount && !_alertedCategories.contains(categoryName)) {
+        _alertedCategories.add(categoryName); // Track alerted category
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showLimitAlert(categoryName));
+      }
+    });
+  }
+
+
+  // Displays an alert dialog for categories near their limit
+  void _showLimitAlert(String categoryName) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Budget Limit Alert'),
+          content: Text("You're almost at your limit for $categoryName!"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
 
@@ -121,11 +158,12 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                             ],
                           ),
                           SizedBox(height: 8),
-                          Text('Total Income: ₱${record['totalIncome'].toStringAsFixed(2)}'),
-                          Text('Total Savings: ₱${record['totalSavings'].toStringAsFixed(2)}'),
-                          Text('Excess Money: ₱${record['excessMoney'].toStringAsFixed(2)}'),
-                          Text('Total Expenses: ₱${record['yourselfExpenses'].toStringAsFixed(2)}'),
-                          Text('Remaining Income: ₱${record['remainingYourself'].toStringAsFixed(2)}'),
+                          Text('Total Income: ₱${(record['totalIncome'] ?? 0.0).toStringAsFixed(2)}'),
+                          Text('Total Savings: ₱${(record['totalSavings'] ?? 0.0).toStringAsFixed(2)}'),
+                          Text('Excess Money: ₱${(record['excessMoney'] ?? 0.0).toStringAsFixed(2)}'),
+                          Text('Total Expenses: ₱${(record['yourselfExpenses'] ?? 0.0).toStringAsFixed(2)}'),
+                          Text('Remaining Income: ₱${(record['remainingYourself'] ?? 0.0).toStringAsFixed(2)}'),
+
 
                           Divider(),
                           Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -138,17 +176,22 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                               var details = entry.value as Map<String, dynamic>;
 
                               return ListTile(
-                                leading: SizedBox( // Constrain the size of the leading widget (icon)
-                                  width: 40,  // Specify the width
-                                  height: 40, // Specify the height
+                                leading: SizedBox(
+                                  width: 40,
+                                  height: 40,
                                   child: Image.asset(details['icon'], fit: BoxFit.contain),
                                 ),
-                                title: Text(entry.key),
+                                title: Row(
+                                  children: [
+                                    Text(details['categoryName'] ?? entry.key), // Show categoryName if available
+                                    SizedBox(width: 8), // Add spacing between icon and text
+                                  ],
+                                ),
                                 trailing: Text('₱${details['amount'].toString()}'),
                               );
-
                             },
                           ),
+
                         ],
                       ),
                     ),

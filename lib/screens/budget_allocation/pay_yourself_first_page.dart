@@ -15,6 +15,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
   TextEditingController percentController = TextEditingController();
   double totalSavings = 0.0;
   double excessMoney = 0.0;
+  double totalIncome = 0.0;
 
   bool showResult = false;
   final Map<String, String> allocations = {};
@@ -48,6 +49,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
       final savings = income * (percent / 100);
 
       setState(() {
+        totalIncome = income;
         totalSavings = savings;
         excessMoney = income - savings;
         showResult = true;
@@ -76,6 +78,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
           selectedCategories: selectedCategories,
           controllers: _controllers,
           excessMoney: excessMoney,
+          totalIncome: totalIncome,
           totalSavings: totalSavings,
           allocate: _allocate,
         ),
@@ -143,6 +146,7 @@ class ShowAllocationPage extends StatefulWidget {
   final Map<String, TextEditingController> controllers;
   final double excessMoney;
   final double totalSavings;
+  final double totalIncome;
   final Function(String, String) allocate;
 
   ShowAllocationPage({
@@ -151,6 +155,7 @@ class ShowAllocationPage extends StatefulWidget {
     required this.excessMoney,
     required this.totalSavings,
     required this.allocate,
+    required this.totalIncome,
   });
 
   @override
@@ -232,6 +237,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
       }
 
       await userDocRef.set({
+        'totalIncome': widget.totalIncome,
         'totalSavings': widget.totalSavings,
         'excessMoney': widget.excessMoney,
         'yourselfExpenses': 0.0, // Initialize yourselfExpenses to 0.0

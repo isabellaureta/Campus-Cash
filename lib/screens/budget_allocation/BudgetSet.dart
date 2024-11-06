@@ -11,6 +11,8 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
   final TextEditingController _budgetController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _selectedPeriod = 'daily'; // Default selection
+  bool _autoRegenerateIncome = false; // Track if auto-regenerate income is selected
+  bool _carryOverExcessIncome = false; // Track if carry-over is selected
 
   Future<void> _saveBudget() async {
     User? user = _auth.currentUser;
@@ -21,6 +23,8 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
         'budget': budget,
         'remaining': budget,
         'period': _selectedPeriod,
+        'autoRegenerateIncome': _autoRegenerateIncome,
+        'carryOverExcessIncome': _carryOverExcessIncome,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -62,6 +66,29 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
                   child: Text(value),
                 );
               }).toList(),
+            ),
+            SizedBox(height: 20),
+            CheckboxListTile(
+              title: Text("Automatically regenerate income after each period"),
+              value: _autoRegenerateIncome,
+              onChanged: (bool? value) {
+                setState(() {
+                  _autoRegenerateIncome = value!;
+                  // Uncheck carry-over if auto-regenerate is turned off
+                  if (!_autoRegenerateIncome) _carryOverExcessIncome = false;
+                });
+              },
+            ),
+            CheckboxListTile(
+              title: Text("Carry over excess income"),
+              value: _carryOverExcessIncome,
+              onChanged: _autoRegenerateIncome
+                  ? (bool? value) {
+                setState(() {
+                  _carryOverExcessIncome = value!;
+                });
+              }
+                  : null, // Disable if auto-regenerate income is unchecked
             ),
             SizedBox(height: 20),
             ElevatedButton(
