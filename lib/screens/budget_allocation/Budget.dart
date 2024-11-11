@@ -74,6 +74,32 @@ class Budget extends StatelessWidget {
 
   Widget _buildBudgetCard(BuildContext context, DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+    double budget = data['budget'] ?? 0.0;
+    double remaining = data['remaining'] ?? 0.0;
+
+    // Calculate remaining budget percentage
+    double remainingPercentage = (remaining / budget) * 100;
+
+    // Show warning if remaining is less than or equal to 20%
+    if (remainingPercentage <= 20) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Warning'),
+              content: Text('You are near your budget limit! Only ₱${remaining.toStringAsFixed(2)} left.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      });
+    }
 
     return GestureDetector(
       onLongPress: () {
@@ -111,11 +137,11 @@ class Budget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Budget: ₱${data['budget'].toStringAsFixed(2)}',
+                'Budget: ₱${budget.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               Text(
-                'Remaining: ₱${data['remaining'].toStringAsFixed(2)}',
+                'Remaining: ₱${remaining.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 16),
               ),
               Text(

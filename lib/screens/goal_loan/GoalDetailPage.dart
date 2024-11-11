@@ -418,36 +418,112 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Goal Details',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      RichText(
+                        text: TextSpan(
+                          style: Theme.of(context).textTheme.bodyLarge,
+                          children: [
+                            TextSpan(
+                              text: 'Goal: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: '₱${goalData['goalAmount']?.toStringAsFixed(2) ?? '0.00'}',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      RichText(
+                        text: TextSpan(
+                          style: Theme.of(context).textTheme.bodyLarge,
+                          children: [
+                            TextSpan(
+                              text: 'Saved: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: '₱${goalData['savedAmount']?.toStringAsFixed(2) ?? '0.00'}',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Frequency: ${goalData['frequency'] ?? 'N/A'}',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        'End Date: ${goalData['endDate'] != null ? DateFormat.yMd().format((goalData['endDate'] as Timestamp).toDate()) : 'No end date'}',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        'Required Savings: ₱${requiredSavings.toStringAsFixed(2)} ${goalData['frequency']}',
+                        style: TextStyle(fontSize: 16, color: Colors.green),
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 12,
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${(progress * 100).toStringAsFixed(2)}% Completed',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text(
-                'Goal: ₱${goalData['goalAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                'Goal Savings History',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.pink.shade300,
+                ),
               ),
-              Text(
-                'Saved: ₱${goalData['savedAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                style: TextStyle(fontSize: 20),
-              ),
-              Text('Frequency: ${goalData['frequency'] ?? 'N/A'}'),
-              Text('End Date: ${goalData['endDate'] != null ? DateFormat.yMd().format((goalData['endDate'] as Timestamp).toDate()) : 'No end date'}'),
-              Text('Required Savings: ₱${requiredSavings.toStringAsFixed(2)} ${goalData['frequency']}'),
-              SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-              SizedBox(height: 10),
-              Text(
-                '${(progress * 100).toStringAsFixed(2)}% Completed',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20),
-              Text('History:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 20, thickness: 1.5),
               _buildHistoryList(),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _showAddSavingsDialog,
-                child: Text('Add goal savings now'),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton.icon(
+                  onPressed: _showAddSavingsDialog,
+                  icon: Icon(Icons.add),
+                  label: Text('Add Savings'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
             ],
           ),
@@ -455,4 +531,5 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       ),
     );
   }
+
 }

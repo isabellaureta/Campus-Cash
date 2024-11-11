@@ -8,6 +8,7 @@ class ExpenseEntity {
   DateTime date;
   int amount;
   String userId;
+  String? description;
 
   ExpenseEntity({
     required this.expenseId,
@@ -15,6 +16,7 @@ class ExpenseEntity {
     required this.date,
     required this.amount,
     required this.userId,
+    this.description,
   });
 
   Map<String, Object?> toDocument() {
@@ -24,6 +26,7 @@ class ExpenseEntity {
       'date': Timestamp.fromDate(date),
       'amount': amount,
       'userId': userId,
+      'description': description,  // Include description here
     };
   }
 
@@ -34,6 +37,7 @@ class ExpenseEntity {
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'] as int,
       userId: doc['userId'] as String,
+      description: doc['description'] as String?,  // Read description from document
     );
   }
 }
@@ -44,6 +48,7 @@ class IncomeEntity {
   DateTime date;
   int amount;
   String userId;
+  String? description;
 
   IncomeEntity({
     required this.incomeId,
@@ -51,6 +56,7 @@ class IncomeEntity {
     required this.date,
     required this.amount,
     required this.userId,
+    this.description,
   });
 
   Map<String, Object?> toDocument() {
@@ -60,6 +66,7 @@ class IncomeEntity {
       'date': date,
       'amount': amount,
       'userId': userId,
+      'description': description,  // Include description here
     };
   }
 
@@ -70,6 +77,7 @@ class IncomeEntity {
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'],
       userId: doc['userId'],
+      description: doc['description'] as String?,  // Read description from document
     );
   }
 }

@@ -4,16 +4,26 @@ sealed class CreateExpenseEvent extends Equatable {
   const CreateExpenseEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
-class CreateExpense extends CreateExpenseEvent{
+class CreateExpense extends CreateExpenseEvent {
   final Expense expense;
+  final bool isRecurring;
+  final String? frequency;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
-  const CreateExpense(this.expense);
+  const CreateExpense({
+    required this.expense,
+    this.isRecurring = false,
+    this.frequency,
+    this.startDate,
+    this.endDate,
+  });
 
   @override
-  List<Object> get props => [expense];
+  List<Object?> get props => [expense, isRecurring, frequency, startDate, endDate];
 }
 
 

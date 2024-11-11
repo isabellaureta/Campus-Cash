@@ -1,62 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationHelper {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   NotificationHelper() {
-    _initializeNotifications();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iOSSettings = DarwinInitializationSettings();
+    final settings = InitializationSettings(android: androidSettings, iOS: iOSSettings);
+    _notificationsPlugin.initialize(settings);
   }
 
-  void _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    final DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    final InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    tz.initializeTimeZones();
-  }
+  Future<void> scheduleNotification(String frequency, TimeOfDay time, int? day) async {
+    await _notificationsPlugin.cancelAll(); // Clear existing notifications
 
-  Future<void> scheduleDailyNotification(TimeOfDay time) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'Daily Expense Reminder',
-      'Reminds you to input your daily expenses',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: false,
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    final scheduledTime = _calculateScheduledTime(time, frequency, day);
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
+    if (scheduledTime == null) return; // If there's an error in scheduling
+
+    await _notificationsPlugin.zonedSchedule(
       0,
-      'Daily Expense Reminder',
-      'Don\'t forget to input your expenses!',
-      _nextInstanceOfTime(time),
-      platformChannelSpecifics,
+      '${frequency} Reminder',
+      'It’s time for your $frequency reminder!',
+      scheduledTime,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'reminder_channel_id',
+          'Reminders',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
       androidAllowWhileIdle: true,
-      matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: _getDateTimeComponent(frequency),
     );
   }
 
-  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, time.hour, time.minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+  tz.TZDateTime _calculateScheduledTime(TimeOfDay time, String frequency, int? day) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledTime = tz.TZDateTime(tz.local, now.year, now.month, now.day, time.hour, time.minute);
+
+    if (scheduledTime.isBefore(now)) {
+      scheduledTime = scheduledTime.add(Duration(days: 1)); // Next day if time has passed
     }
-    return scheduledDate;
+
+    if (frequency == 'Weekly' && day != null) {
+      while (scheduledTime.weekday != day) {
+        scheduledTime = scheduledTime.add(Duration(days: 1));
+      }
+    } else if (frequency == 'Monthly' && day != null) {
+      while (scheduledTime.day != day) {
+        scheduledTime = scheduledTime.add(Duration(days: 1));
+      }
+    }
+    return scheduledTime;
+  }
+
+  DateTimeComponents _getDateTimeComponent(String frequency) {
+    switch (frequency) {
+      case 'Weekly':
+        return DateTimeComponents.dayOfWeekAndTime;
+      case 'Monthly':
+        return DateTimeComponents.dayOfMonthAndTime;
+      default:
+        return DateTimeComponents.time;
+    }
   }
 
   Future<void> cancelNotification() async {
-    await flutterLocalNotificationsPlugin.cancel(0);
+    await _notificationsPlugin.cancelAll();
   }
 }

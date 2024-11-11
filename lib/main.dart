@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'package:timezone/data/latest_all.dart' as tz;
 
 import 'package:bloc/bloc.dart';
 import 'package:campuscash/firebase_options.dart';
@@ -8,18 +9,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'app_view.dart';
 import 'simpleBlocObserver.dart';
-
-
 import 'package:campuscash/auth/bloc/auth_bloc.dart';
 import 'package:campuscash/auth/bloc/auth_event.dart';
 import 'package:campuscash/auth/bloc/auth_state.dart';
-import 'package:campuscash/auth/firebase_auth_provider.dart';
 import 'package:campuscash/helpers/loading_screen.dart';
 import 'package:campuscash/screens/home/views/forgot_password_view.dart';
-//import 'package:campuscash/views/history_view.dart';
 import 'package:campuscash/screens/home/views/login_view.dart';
-//import 'package:campuscash/views/bottom_navbar_view.dart';
-//import 'package:campuscash/views/user_details_view.dart';
 import 'package:campuscash/screens/home/views/register_view.dart';
 import 'package:campuscash/screens/home/views/verify_email_view.dart';
 import 'package:campuscash/screens/home/views/welcome_view.dart';
@@ -27,13 +22,29 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   await FirebaseAppCheck.instance.activate();
-  Bloc.observer = SimpleBlocObserver(); // Ensure this is defined
+
+  // Set Firestore settings with caching enabled
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    host: "firestore.googleapis.com", // Default host
+    sslEnabled: true,
+  );
+
+  Bloc.observer = SimpleBlocObserver();
+  tz.initializeTimeZones();
   runApp(const MyApp());
 }
 

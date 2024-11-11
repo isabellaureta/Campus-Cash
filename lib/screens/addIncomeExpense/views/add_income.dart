@@ -23,6 +23,8 @@ class _AddIncomeState extends State<AddIncome> {
   TextEditingController incomeController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
   TextEditingController dateController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+
   late Income income;
   bool isLoading = false;
 
@@ -280,6 +282,25 @@ class _AddIncomeState extends State<AddIncome> {
                   const SizedBox(
                     height: 32,
                   ),
+                  TextFormField(
+                    controller: descriptionController,
+                    textAlignVertical: TextAlignVertical.center,
+                    maxLines: 3,  // Allows multi-line input
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: const Icon(
+                        FontAwesomeIcons.pen,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      hintText: 'Description',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
                   SizedBox(
                     width: double.infinity,
                     height: kToolbarHeight,
@@ -296,15 +317,13 @@ class _AddIncomeState extends State<AddIncome> {
 
                           // Check if any budget or budgeting technique document exists
                           final budgetExists = await checkIfBudgetExists(user.uid);
-                          if (!budgetExists) {
-                            // Show alert if no budgeting technique exists
-                            showAlertDialog(context, 'Please add a Budget or Budgeting Technique first.');
-                            return;
-                          }
+
 
                           // If a budget document exists, proceed with saving the income
                           setState(() {
                             income.amount = int.parse(incomeController.text);
+                            income.description = descriptionController.text;  // Set description from the controller
+
                           });
 
                           context.read<CreateIncomeBloc>().add(CreateIncome(income));

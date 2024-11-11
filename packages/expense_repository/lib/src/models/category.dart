@@ -112,7 +112,6 @@ final List<Category> predefinedCategories = [
   Category(icon: 'assets/Entertainment.png', name: 'Entertainment', color: 0xFFFF7043, categoryId: '037'),
   Category(icon: 'assets/Medical.png', name: 'Medical', color: 0xFFFFEB3B, categoryId: '038'),
   Category(icon: 'assets/Insurance.png', name: 'Insurance', color: 0xFFD4E157, categoryId: '039'),
-  Category(icon: 'assets/Savings.png', name: 'Savings', color: 0xFFE91E63, categoryId: '041'),
   Category(icon: 'assets/Investments.png', name: 'Investments', color: 0xFFF44336, categoryId: '042'),
   Category(icon: 'assets/Credit Cards.png', name: 'Credit Cards', color: 0xFF26A69A, categoryId: '043'),
   Category(icon: 'assets/Gifts.png', name: 'Gifts', color: 0xFFBBDEFB, categoryId: '044'),
@@ -132,6 +131,7 @@ final List<Category> predefinedCategories = [
 
 final List<Category2> predefinedCategories2 = [
   Category2(icon: 'assets/Allowance.png', name: 'Allowance', color: 0xFF7986CB, categoryId2: '056'),
+  Category2(icon: 'assets/Savings.png', name: 'Savings', color: 0xFFE91E63, categoryId2: '041'),
   Category2(icon: 'assets/Scholarship.png', name: 'Scholarship', color: 0xFFE57373, categoryId2: '057'),
   Category2(icon: 'assets/Grants.png', name: 'Grants', color: 0xFF64B5F6, categoryId2: '058'),
   Category2(icon: 'assets/Part-Time Job.png', name: 'Part-Time Job', color: 0xFFFFD54F, categoryId2: '059'),
@@ -142,5 +142,6 @@ final List<Category2> predefinedCategories2 = [
   Category2(icon: 'assets/Awards.png', name: 'Awards', color: 0xFFF06292, categoryId2: '064'),
   Category2(icon: 'assets/Refunds.png', name: 'Refunds', color: 0xFFD7CCC8, categoryId2: '065'),
   Category2(icon: 'assets/Crypto.png', name: 'Crypto', color: 0xFFFFEB3B, categoryId2: '066'),
+  Category2(icon: 'assets/Others.png', name: 'Others', color: 0xFFEC407A, categoryId2: '055'),
 ];
 

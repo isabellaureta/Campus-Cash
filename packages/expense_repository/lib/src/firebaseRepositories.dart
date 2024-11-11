@@ -33,7 +33,12 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     }
   }
 
-  Future<String?> createExpense(Expense expense) async {
+  Future<String?> createExpense(Expense expense, {
+    bool isRecurring = false,
+    String? frequency,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -46,17 +51,26 @@ class FirebaseExpenseRepo implements ExpenseRepository {
         category: expense.category,
         date: expense.date,
         amount: expense.amount,
+        description: expense.description,
       );
 
-      await FirebaseFirestore.instance
-          .collection('expenses')
-          .doc(updatedExpense.expenseId)
-          .set(updatedExpense.toEntity().toDocument());
+      final expenseData = updatedExpense.toEntity().toDocument();
 
-      // Update total envelope expenses and remaining envelope amount in envelopeAllocations
+      if (isRecurring) {
+        expenseData['isRecurring'] = true;
+        expenseData['frequency'] = frequency;
+        expenseData['startDate'] = startDate != null ? Timestamp.fromDate(startDate) : null;
+        expenseData['endDate'] = endDate != null ? Timestamp.fromDate(endDate) : null;
+      }
+
+      // Save expense data to Firestore
+      await expenseCollection.doc(updatedExpense.expenseId).set(expenseData);
+
+      // Update the total money amount in Firestore to reflect this expense
+      await _updateTotalMoney(user.uid, expense.amount.toDouble(), false);
+
+      // Additional budget updates (if needed)
       await _updateEnvelopeExpenses(user.uid, updatedExpense.amount.toDouble());
-
-      // Attempt deductions, but do not throw errors if documents are missing
       await _deductExpenseFromCategory(user.uid, updatedExpense.category.categoryId, updatedExpense.amount);
       await _deductFromPayYourselfFirst(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
       await _deductFromRemainingBudget(user.uid, updatedExpense.category.categoryId, updatedExpense.amount.toDouble());
@@ -64,12 +78,30 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
       log('Expense created and budget updated successfully.');
       return null;
-
     } catch (e) {
       log('Failed to create expense: ${e.toString()}');
       return 'Failed to create expense: ${e.toString()}';
     }
   }
+
+  Future<void> _updateTotalMoney(String userId, double amount, bool isIncome) async {
+    final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(userId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final totalMoneySnapshot = await transaction.get(totalMoneyDoc);
+
+      double currentTotal = totalMoneySnapshot.exists ? (totalMoneySnapshot['totalMoneyAmount'] ?? 0.0) : 0.0;
+      double updatedTotal = isIncome ? currentTotal + amount : currentTotal - amount;
+
+      // Update Firestore with the new balance, which can now be negative
+      transaction.set(totalMoneyDoc, {
+        'totalMoneyAmount': updatedTotal,
+      }, SetOptions(merge: true));
+
+      log('Total money amount updated to $updatedTotal for user $userId.');
+    });
+  }
+
 
 
   Future<void> _deductFromOverallRemainingBudget(String userId, double expenseAmount) async {
@@ -326,6 +358,7 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
           .set(income.toEntity().toDocument());
 
       await _updateRemainingBudget(income.userId, income.amount);
+      await _updateTotalMoney(income.userId, income.amount.toDouble(), true);
 
       log('Income created and budget updated successfully.');
     } catch (e) {
@@ -347,6 +380,27 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
       rethrow;
     }
   }
+
+  Future<void> _updateTotalMoney(String userId, double amount, bool isIncome) async {
+    final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(userId);
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final totalMoneySnapshot = await transaction.get(totalMoneyDoc);
+
+      double currentTotal = totalMoneySnapshot.exists ? (totalMoneySnapshot['totalMoneyAmount'] ?? 0.0) : 0.0;
+      double updatedTotal = isIncome ? currentTotal + amount : currentTotal - amount;
+
+      // Ensure updatedTotal does not go negative
+      updatedTotal = updatedTotal < 0 ? 0.0 : updatedTotal;
+
+      transaction.set(totalMoneyDoc, {
+        'totalMoneyAmount': updatedTotal,
+      }, SetOptions(merge: true));
+
+      log('Total money amount updated to $updatedTotal for user $userId.');
+    });
+  }
+
 
   Future<void> _updateRemainingBudget(String userId, int incomeAmount) async {
     try {

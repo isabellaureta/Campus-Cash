@@ -62,6 +62,17 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final totalWantsDeductions = await _fetchTotalDeductions(userDocRef, 'Wants');
     final totalSavingsDeductions = await _fetchTotalDeductions(userDocRef, 'Savings');
 
+    final totalBudgetToSpend = needsCategories.fold<double>(0.0, (sum, category) => sum + (category['amount'] ?? 0.0)) +
+        wantsCategories.fold<double>(0.0, (sum, category) => sum + (category['amount'] ?? 0.0));
+
+    await userDocRef.set({
+      'userId': widget.userId,
+      'totalBudget': totalBudget,
+      'totalExpenses': totalExpenses,
+      'remainingBudget': calculatedRemainingBudget,
+      'totalBudgetToSpend': totalBudgetToSpend, // Save totalBudgetToSpend to Firestore
+    }, SetOptions(merge: true));  // Use merge to avoid overwriting other fields
+
     _checkCategoryLimits(needsCategories, 'Needs');
     _checkCategoryLimits(wantsCategories, 'Wants');
     _checkCategoryLimits(savingsCategories, 'Savings');
@@ -110,7 +121,8 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
       },
     );
   }
-  // Widget to display the category list
+
+
   Widget _buildCategoryList(List<dynamic> categories) {
     if (categories.isEmpty) {
       return Padding(
@@ -125,6 +137,9 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
+        final amount = category['amount'] ?? 0.0;
+        final originalAmount = category['originalAmount'] ?? 0.0;  // Fetch originalAmount if it exists
+
         return ListTile(
           leading: Image.asset(
             category['icon'], // Assuming icons are stored with their paths
@@ -132,11 +147,22 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
             height: 24.0,
           ),
           title: Text(category['name']),
-          trailing: Text('₱${category['amount'].toStringAsFixed(2)}'),
+          subtitle: originalAmount > 0
+              ? Text(
+            'Allocated: ₱${originalAmount.toStringAsFixed(2)}',
+            style: TextStyle(fontSize: 10.0), // Set font size here
+          )
+              : null,
+          trailing: Text(
+            '₱${amount.toStringAsFixed(2)}',
+            style: TextStyle(fontSize: 16.0), // Optional: set font size for amount as well
+          ),
         );
+
       },
     );
   }
+
 
   // Build the TabBar view for Needs, Wants, and Savings
   Widget _buildTabContent(String tabName, List<dynamic> categories) {
@@ -273,6 +299,11 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
           final remainingBudget = budgetData['remainingBudget'] ?? 0.0;
 
+          // Calculate the total amount of the "Needs" and "Wants" categories
+          final totalBudgetToSpend = needsCategories.fold<double>(0.0, (double sum, Map<String, dynamic> category) => sum + (category['amount'] ?? 0.0))
+              + wantsCategories.fold<double>(0.0, (double sum, Map<String, dynamic> category) => sum + (category['amount'] ?? 0.0));
+
+
           return Column(
             children: [
               Padding(
@@ -285,13 +316,20 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
+                    // New "Total Budget to Spend" calculation
+                    Text(
+                      'Total Budget to Spend: ₱${totalBudgetToSpend.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8.0),
                     Text(
                       'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
+                    // Calculate Remaining Budget as Total Budget to Spend - Total Expenses
                     Text(
-                      'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
+                      'Remaining Budget: ₱${(totalBudgetToSpend - totalExpenses).toStringAsFixed(2)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                     SizedBox(height: 16.0),
@@ -310,8 +348,10 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
               ),
             ],
           );
+
         },
       ),
     );
   }
+
 }

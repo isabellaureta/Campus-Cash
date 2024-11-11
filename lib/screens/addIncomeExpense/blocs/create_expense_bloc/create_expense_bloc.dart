@@ -24,9 +24,18 @@ class CreateExpenseBloc extends Bloc<CreateExpenseEvent, CreateExpenseState> {
           category: event.expense.category,
           date: event.expense.date,
           amount: event.expense.amount,
+          description: event.expense.description
         );
 
-        await expenseRepository.createExpense(expense);
+        // Pass recurring options to the repository if the expense is marked as recurring
+        await expenseRepository.createExpense(
+          expense,
+          isRecurring: event.isRecurring,
+          frequency: event.frequency,
+          startDate: event.startDate,
+          endDate: event.endDate,
+        );
+
         emit(CreateExpenseSuccess());
       } catch (e) {
         emit(CreateExpenseFailure());
@@ -53,6 +62,7 @@ class CreateIncomeBloc extends Bloc<CreateIncomeEvent, CreateIncomeState> {
           category2: event.income.category2,
           date: event.income.date,
           amount: event.income.amount,
+          description: event.income.description
         );
 
         await incomeRepository.createIncome(income);

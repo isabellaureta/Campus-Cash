@@ -7,6 +7,7 @@ class Expense {
   Category category;
   DateTime date;
   int amount;
+  String? description;
 
   Expense({
     required this.expenseId,
@@ -14,6 +15,7 @@ class Expense {
     required this.category,
     required this.date,
     required this.amount,
+    this.description,
   });
 
   static Future<Expense> createExpense({
@@ -21,6 +23,7 @@ class Expense {
     required Category category,
     required DateTime date,
     required int amount,
+    String? description,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -32,6 +35,7 @@ class Expense {
       category: category,
       date: date,
       amount: amount,
+      description: description,
     );
   }
 
@@ -41,6 +45,7 @@ class Expense {
     category: Category.empty,
     date: DateTime.now(),
     amount: 0,
+    description: '',
   );
 
   ExpenseEntity toEntity() {
@@ -50,6 +55,7 @@ class Expense {
       category: category,
       date: date,
       amount: amount,
+      description: description,
     );
   }
 
@@ -60,6 +66,7 @@ class Expense {
       category: entity.category,
       date: entity.date,
       amount: entity.amount,
+      description: entity.description,
     );
   }
 }

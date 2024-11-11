@@ -418,38 +418,115 @@ class _AddExpenseState extends State<AddExpense> {
                             return;
                           }
 
-                          // Check if any budget or budgeting technique document exists
+                          // Check if budget exists before proceeding
                           final expenseExists = await checkIfBudgetExists(user.uid);
-                          if (!expenseExists) {
-                            // Show alert if no budgeting technique exists
-                            showAlertDialog(context, 'Please add a Budget or Budgeting Technique first.');
-                            return;
-                          }
 
-                          // If a budget document exists, proceed with saving the expense
+
+                          // Parse the expense amount entered by the user
+                          double expenseAmount = double.tryParse(expenseController.text) ?? 0.0;
+
+
+
+                          // Update the expense amount in the state if within budget
                           setState(() {
-                            expense.amount = int.parse(expenseController.text);
+                            expense.amount = expenseAmount.toInt();
+                            expense.description = descriptionController.text;  // Set description from the controller
+
                           });
 
-                          context.read<CreateExpenseBloc>().add(CreateExpense(expense));
-                        },
+                          // Prepare recurring options if the expense is marked as recurring
+                          final String? frequency = isRecurring ? selectedFrequency : null;
+                          final DateTime? startDate = isRecurring && startDateController.text.isNotEmpty
+                              ? DateFormat('dd/MM/yyyy').parse(startDateController.text)
+                              : null;
+                          final DateTime? endDate = isRecurring && !noEndDate && endDateController.text.isNotEmpty
+                              ? DateFormat('dd/MM/yyyy').parse(endDateController.text)
+                              : null;
 
+                          // Add the expense event to the Bloc
+                          context.read<CreateExpenseBloc>().add(
+                            CreateExpense(
+                              expense: expense,
+                              isRecurring: isRecurring,
+                              frequency: frequency,
+                              startDate: startDate,
+                              endDate: endDate,
+                            ),
+                          );
+                        },
                         style: TextButton.styleFrom(
                             backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(12))),
+                                borderRadius: BorderRadius.circular(12))),
                         child: const Text(
                           'Save',
                           style: TextStyle(
                               fontSize: 22, color: Colors.white),
                         )),
-                  ),
+                  )
+
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<double> _fetchRemainingBudget(String userId) async {
+    // Fetch the remaining budget from Firestore
+    DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
+        .collection('budgets')
+        .doc(userId)
+        .get();
+
+    return budgetDoc.exists ? (budgetDoc['remaining'] ?? 0).toDouble() : 0.0;
+  }
+
+  Future<void> _attemptCreateExpense() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      log('No authenticated user found.');
+      return;
+    }
+
+    final expenseExists = await checkIfBudgetExists(user.uid);
+
+
+    // Retrieve remaining budget
+    double remainingBudget = await _fetchRemainingBudget(user.uid);
+
+    // Get the expense amount from the controller and parse to double
+    double expenseAmount = double.parse(expenseController.text);
+
+    // Check if the expense exceeds the remaining budget
+    if (expenseAmount > remainingBudget) {
+      showAlertDialog(context, 'Expense exceeds your remaining budget of ₱${remainingBudget.toStringAsFixed(2)}.');
+      return;
+    }
+
+    // Set expense amount in state and prepare additional details for recurring expenses
+    setState(() {
+      expense.amount = expenseAmount.toInt();
+    });
+
+    final String? frequency = isRecurring ? selectedFrequency : null;
+    final DateTime? startDate = isRecurring && startDateController.text.isNotEmpty
+        ? DateFormat('dd/MM/yyyy').parse(startDateController.text)
+        : null;
+    final DateTime? endDate = isRecurring && !noEndDate && endDateController.text.isNotEmpty
+        ? DateFormat('dd/MM/yyyy').parse(endDateController.text)
+        : null;
+
+    // Dispatch the CreateExpense event to the bloc
+    context.read<CreateExpenseBloc>().add(
+      CreateExpense(
+        expense: expense,
+        isRecurring: isRecurring,
+        frequency: frequency,
+        startDate: startDate,
+        endDate: endDate,
       ),
     );
   }
