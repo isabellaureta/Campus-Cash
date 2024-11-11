@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'addGoals.dart'; // Assuming this file contains your AddGoalPage class
+import 'GoalDetailPage.dart';
+import 'addGoals.dart';
 
 class CustomTabBarsPage extends StatefulWidget {
   const CustomTabBarsPage({super.key});
@@ -15,6 +17,15 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => AddGoalPage()),
+    );
+  }
+
+  void _navigateToGoalDetailPage(DocumentSnapshot goal) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GoalDetailPage(goal: goal),
+      ),
     );
   }
 
@@ -34,21 +45,22 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
   Widget _buildGoalCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
-    // Parse goal progress
-    double progress = data['goalAmount'] > 0
-        ? data['savedAmount'] / data['goalAmount']
-        : 0;
+    // Parse the goal's saved and target amounts, color, and frequency
+    double savedAmount = data['savedAmount']?.toDouble() ?? 0.0;
+    double goalAmount = data['goalAmount']?.toDouble() ?? 0.0;
+    double requiredSavings = data['requiredSavings']?.toDouble() ?? 0.0;
+    String frequency = data['frequency'] ?? 'Daily';
+    double progress = goalAmount > 0 ? savedAmount / goalAmount : 0.0;
 
-    // Parse startDate and endDate fields from Firestore Timestamps
-    DateTime startDate = (data['startDate'] as Timestamp).toDate();
-    DateTime? endDate = data['endDate'] != null
-        ? (data['endDate'] as Timestamp).toDate()
-        : null;
+    // Safely parse startDate and endDate with null checks
+    DateTime? startDate = (data['startDate'] as Timestamp?)?.toDate();
+    DateTime? endDate = (data['endDate'] as Timestamp?)?.toDate();
 
     // Parse the color from Firestore and convert it to a Color object
     Color goalColor = Color(int.parse(data['color'], radix: 16)).withOpacity(1.0);
 
     return GestureDetector(
+      onTap: () => _navigateToGoalDetailPage(document),
       onLongPress: () {
         showDialog(
           context: context,
@@ -77,7 +89,7 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
       },
       child: Card(
         elevation: 4,
-        color: goalColor, // Set the card's background color
+        color: goalColor,
         margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -85,40 +97,13 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                data['goalName'] ?? 'Unnamed Goal', // Handle null goal name
+                data['goalName'] ?? 'Unnamed Goal',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Goal: ₱${data['goalAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        'Saved: ₱${data['savedAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Start: ${DateFormat.yMMMd().format(startDate)}',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      Text(
-                        'End: ${endDate != null ? DateFormat.yMMMd().format(endDate) : 'Until Forever'}',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ],
+              Text(
+                '₱${savedAmount.toStringAsFixed(2)} / ₱${goalAmount.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 16),
               ),
               SizedBox(height: 10),
               LinearProgressIndicator(
@@ -132,14 +117,27 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
                 '${(progress * 100).toStringAsFixed(2)}% Completed',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              SizedBox(height: 10),
+              Text(
+                'Required Savings: ₱${requiredSavings.toStringAsFixed(2)} $frequency',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              SizedBox(height: 10),
+              if (startDate != null) // Only show if startDate is not null
+                Text(
+                  'Start: ${DateFormat.yMMMd().format(startDate)}',
+                  style: TextStyle(fontSize: 13),
+                ),
+              Text(
+                'End: ${endDate != null ? DateFormat.yMMMd().format(endDate) : 'No end date'}',
+                style: TextStyle(fontSize: 13),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +161,11 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('goals').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('goals')
+                  .doc(FirebaseAuth.instance.currentUser!.uid) // Get user's goals
+                  .collection('userGoals')
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return Center(child: CircularProgressIndicator());
