@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_repository/repositories.dart';
 
-
 class PriorityBasedRecords extends StatefulWidget {
   final List<Category> selectedCategories;
 
@@ -19,6 +18,7 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
   final TextEditingController _incomeController = TextEditingController();
   String _incomeType = 'Monthly';
   double totalIncome = 0.0;
+  double totalAllocated = 0.0;
   Map<Category, TextEditingController> categoryAmountControllers = {};
 
   @override
@@ -26,28 +26,20 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
     super.initState();
     for (var category in widget.selectedCategories) {
       categoryAmountControllers[category] = TextEditingController()
-        ..addListener(() => _validateTotalAllocation());
+        ..addListener(_calculateTotalAllocation);
     }
   }
 
-  void _validateTotalAllocation() {
+  void _calculateTotalAllocation() {
     double allocatedSum = 0.0;
     for (var controller in categoryAmountControllers.values) {
       final value = double.tryParse(controller.text) ?? 0.0;
       allocatedSum += value;
     }
 
-    if (allocatedSum > totalIncome) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Total allocation exceeds your income.')),
-      );
-
-      categoryAmountControllers.forEach((category, controller) {
-        if (controller.text.isNotEmpty && allocatedSum > totalIncome) {
-          controller.text = '0';
-        }
-      });
-    }
+    setState(() {
+      totalAllocated = allocatedSum;
+    });
   }
 
   Future<void> _saveAllocation() async {
@@ -64,7 +56,7 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
         'categoryName': category.name,
         'categoryId': category.categoryId,
         'allocatedAmount': double.tryParse(categoryAmountControllers[category]?.text ?? '0') ?? 0.0,
-        'categoryIcon': category.icon,  // Save icon path
+        'categoryIcon': category.icon,
       };
     }).toList();
 
@@ -86,7 +78,6 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
     );
   }
 
-
   @override
   void dispose() {
     for (var controller in categoryAmountControllers.values) {
@@ -98,6 +89,8 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
 
   @override
   Widget build(BuildContext context) {
+    final isAllocationValid = totalAllocated <= totalIncome;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Allocate Funds'),
@@ -122,26 +115,42 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               onChanged: (value) {
                 setState(() {
                   totalIncome = double.tryParse(value) ?? 0.0;
+                  _calculateTotalAllocation();
                 });
               },
             ),
             const SizedBox(height: 16),
-            DropdownButton<String>(
-              value: _incomeType,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _incomeType = newValue!;
-                });
-              },
-              items: <String>['Monthly', 'Weekly', 'Every 15th of the Month']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+
+            // Total Allocation Display
+            Text(
+              'Total Allocation: \$${totalAllocated.toStringAsFixed(2)} / \$${totalIncome.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isAllocationValid ? Colors.black : Colors.red,
+              ),
             ),
+            const SizedBox(height: 8),
+
+// Progress Bar
+            LinearProgressIndicator(
+              value: totalIncome > 0 ? totalAllocated / totalIncome : 0.0,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isAllocationValid ? Colors.blueAccent : Colors.redAccent,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+// Exceeding Income Message
+            if (!isAllocationValid)
+              const Text(
+                'Warning: Total allocation exceeds your income!',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
             const SizedBox(height: 16),
+
+            // Category Allocation Input Fields
             Expanded(
               child: ListView.builder(
                 itemCount: widget.selectedCategories.length,
@@ -161,17 +170,13 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
                         category.name,
                         style: const TextStyle(fontSize: 14),
                       ),
-                      subtitle: SizedBox(
-                        height: 40,
-                        child: TextField(
-                          controller: controller,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Amount',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                          ),
-                          onChanged: (_) => _validateTotalAllocation(),
+                      subtitle: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Amount',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                         ),
                       ),
                     ),
@@ -180,8 +185,10 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Save Allocation Button (disabled if allocation exceeds income)
             ElevatedButton(
-              onPressed: _saveAllocation,
+              onPressed: isAllocationValid ? _saveAllocation : null,
               child: const Text('Save Allocation'),
             ),
           ],
@@ -261,7 +268,6 @@ class PriorityBasedSummary extends StatelessWidget {
 
           final data = snapshot.data!;
           final totalIncome = data['totalIncome'];
-          final frequency = data['frequency'];
           final allocations = List<Map<String, dynamic>>.from(data['allocations'] ?? []);
 
           // Sort allocations by priority, handling null values
@@ -284,10 +290,7 @@ class PriorityBasedSummary extends StatelessWidget {
                       'Income: \$${totalIncome.toStringAsFixed(2)}',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text(
-                      'Frequency: $frequency',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+
                     leading: const Icon(Icons.account_balance_wallet, color: Colors.blue),
                   ),
                 ),

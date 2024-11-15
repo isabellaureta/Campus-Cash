@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+
 import '../home/views/login_view.dart';
 import 'Notifications.dart';
 
@@ -23,8 +24,6 @@ class _ProfilePageState extends State<ProfilePage> {
   File? _imageFile;
   final NotificationHelper _notificationHelper = NotificationHelper();
   TimeOfDay _selectedTime = TimeOfDay(hour: 20, minute: 0);
-  String _notificationFrequency = 'Daily'; // default to Daily
-  int? _selectedDay; // Optional: day of the week (1 = Monday) or month (1-31)
 
   @override
   void initState() {
@@ -32,7 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadUserProfile();
   }
 
-  Future<void> _loadUserProfile() async {
+  void _loadUserProfile() async {
     User? user = _auth.currentUser;
     if (user != null) {
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
@@ -45,10 +44,10 @@ class _ProfilePageState extends State<ProfilePage> {
           hour: (userDoc['notificationHour'] ?? 20) as int,
           minute: (userDoc['notificationMinute'] ?? 0) as int,
         );
-        _notificationFrequency = userDoc['notificationFrequency'] ?? 'Daily';
-        _selectedDay = userDoc['notificationDay'];
       });
-      _updateNotificationSettings();
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
+      }
     }
   }
 
@@ -61,26 +60,58 @@ class _ProfilePageState extends State<ProfilePage> {
         'notificationsEnabled': _notificationsEnabled,
         'notificationHour': _selectedTime.hour,
         'notificationMinute': _selectedTime.minute,
-        'notificationFrequency': _notificationFrequency,
-        'notificationDay': _selectedDay,
       });
       if (_emailController.text != user.email) {
-        await user.updateEmail(_emailController.text);
+        user.updateEmail(_emailController.text);
       }
-      _updateNotificationSettings();
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
+      } else {
+        _notificationHelper.cancelNotification();
+      }
     }
   }
 
-  void _updateNotificationSettings() {
-    if (_notificationsEnabled) {
-      _notificationHelper.scheduleNotification(
-        _notificationFrequency,
-        _selectedTime,
-        _selectedDay,
-      );
-    } else {
-      _notificationHelper.cancelNotification();
-    }
+  void _deleteAccount() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Account'),
+          content: Text('Are you sure you want to delete your account? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                User? user = _auth.currentUser;
+                if (user != null) {
+                  try {
+                    await _firestore.collection('users').doc(user.uid).delete();
+                    await user.delete();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginView()),
+                          (route) => false,
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete account: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _pickImage() async {
@@ -90,13 +121,17 @@ class _ProfilePageState extends State<ProfilePage> {
         _imageFile = File(pickedFile.path);
         _profileImageUrl = null;
       });
+
       String fileName = pickedFile.name;
       try {
         TaskSnapshot snapshot = await _storage.ref('profile_images/$fileName').putFile(_imageFile!);
+
         String downloadUrl = await snapshot.ref.getDownloadURL();
+
         setState(() {
           _profileImageUrl = downloadUrl;
         });
+
         await _updateUserProfile(); // Correctly calling the update method
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,109 +150,162 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _selectedTime = picked;
       });
-      _updateNotificationSettings();
+      if (_notificationsEnabled) {
+        _notificationHelper.scheduleDailyNotification(_selectedTime);
+      }
     }
   }
 
-  Future<void> _selectDay(BuildContext context) async {
-    // Choose the day for weekly/monthly notifications
+  void _showLogoutDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        int initialDay = _notificationFrequency == 'Weekly' ? 1 : 1;
-        int maxDays = _notificationFrequency == 'Weekly' ? 7 : 31;
         return AlertDialog(
-          title: Text('Select Day'),
-          content: DropdownButton<int>(
-            value: _selectedDay,
-            items: List.generate(maxDays, (index) => index + 1)
-                .map((int day) => DropdownMenuItem<int>(
-              value: day,
-              child: Text(day.toString()),
-            ))
-                .toList(),
-            onChanged: (int? value) {
-              setState(() {
-                _selectedDay = value;
-              });
-              Navigator.of(context).pop();
-            },
-          ),
+          title: Text('Logout'),
+          content: Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+            TextButton(
+              child: Text('Logout', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await _auth.signOut(); // Sign out the user
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginView()),
+                );
+              },
+            ),
+          ],
         );
       },
     );
   }
 
-  void _onFrequencyChanged(String? value) {
-    setState(() {
-      _notificationFrequency = value!;
-      if (value == 'Daily') {
-        _selectedDay = null; // Reset selected day if Daily is chosen
-      }
-      _updateNotificationSettings();
-    });
-  }
-
-  void _testImmediateNotification() {
-    _notificationHelper.scheduleNotification('Daily', TimeOfDay.now(), null);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Test notification scheduled')));
-  }
-
-
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = Colors.pink.shade300; // Pink
+    final Color secondaryColor = Colors.blue.shade300; // Blue
+
     return Scaffold(
-      appBar: AppBar(title: Text('Profile Page')),
+      appBar: AppBar(
+        title: Text('Profile Page'),
+        backgroundColor: primaryColor,
+      ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(20.0),
         child: Column(
           children: [
             GestureDetector(
               onTap: _pickImage,
               child: CircleAvatar(
-                radius: 50,
+                radius: 60,
+                backgroundColor: secondaryColor,
                 backgroundImage: _imageFile != null
                     ? FileImage(_imageFile!)
                     : (_profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null) as ImageProvider?,
-                child: _imageFile == null && _profileImageUrl == null ? Icon(Icons.add_a_photo) : null,
+                child: _imageFile == null && _profileImageUrl == null
+                    ? Icon(Icons.add_a_photo, color: Colors.white, size: 40)
+                    : null,
               ),
             ),
-            TextField(controller: _nameController, decoration: InputDecoration(labelText: 'Name')),
-            TextField(controller: _emailController, decoration: InputDecoration(labelText: 'Email')),
+            SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Name',
+                labelStyle: TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: primaryColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: secondaryColor),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: TextStyle(color: primaryColor),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: primaryColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: secondaryColor),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
             SwitchListTile(
-              title: Text('Enable Notifications'),
+              activeColor: primaryColor,
+              title: Text('Enable Notifications', style: TextStyle(color: Colors.blue)),
               value: _notificationsEnabled,
               onChanged: (bool value) {
                 setState(() {
                   _notificationsEnabled = value;
                 });
-                _updateNotificationSettings();
+                if (value) {
+                  _notificationHelper.scheduleDailyNotification(_selectedTime);
+                } else {
+                  _notificationHelper.cancelNotification();
+                }
               },
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _notificationFrequency,
-                    items: ['Daily', 'Weekly', 'Monthly'].map((String frequency) {
-                      return DropdownMenuItem(
-                        value: frequency,
-                        child: Text(frequency),
-                      );
-                    }).toList(),
-                    onChanged: _onFrequencyChanged,
-                    decoration: InputDecoration(labelText: 'Frequency'),
-                  ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                if (_notificationFrequency != 'Daily')
-                  IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () => _selectDay(context),
-                  ),
-              ],
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              onPressed: () => _selectTime(context),
+              child: Text('Select Notification Time', style: TextStyle(color: Colors.white)),
             ),
-            ElevatedButton(onPressed: () => _selectTime(context), child: Text('Select Notification Time')),
-            ElevatedButton(onPressed: _updateUserProfile, child: Text('Update Profile')),
+            SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              onPressed: _updateUserProfile,
+              child: Text('Update Profile', style: TextStyle(color: Colors.white)),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              onPressed: _showLogoutDialog,
+              child: Text('Logout', style: TextStyle(color: Colors.white)),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              ),
+              onPressed: _deleteAccount,
+              child: Text('Delete Account', style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
       ),

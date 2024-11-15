@@ -231,7 +231,8 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         allocationsData[category.categoryId] = {
           'categoryName': category.name,
           'categoryId': category.categoryId,
-          'amount': allocatedAmount,
+          'amount': allocatedAmount,                    // Actual allocated amount
+          'allocatedAmount': allocatedAmount,            // Original allocated amount
           'icon': category.icon ?? 'assets/${category.name.toLowerCase()}.png',
         };
       }
@@ -240,9 +241,9 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         'totalIncome': widget.totalIncome,
         'totalSavings': widget.totalSavings,
         'excessMoney': widget.excessMoney,
-        'yourselfExpenses': 0.0, // Initialize yourselfExpenses to 0.0
-        'remainingYourself': widget.excessMoney, // Set remainingYourself initially as excessMoney
-        'allocations': allocationsData,
+        'yourselfExpenses': 0.0,
+        'remainingYourself': widget.excessMoney,
+        'allocations': allocationsData,                 // Include original allocation
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

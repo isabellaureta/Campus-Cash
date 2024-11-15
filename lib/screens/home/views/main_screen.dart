@@ -5,14 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:month_picker_dialog/month_picker_dialog.dart';
 import '../../Profile/UserProfile.dart';
 import '../../transaction_history/TransactionHistory.dart';
 
 class MainScreen extends StatefulWidget {
   final List<Expense> expenses;
   final List<Income> incomes;
-  final List<Transaction> monthlyTransactions;
+  final List<Transaction_> monthlyTransactions;
 
   const MainScreen({Key? key, required this.expenses, required this.incomes, required this.monthlyTransactions,  // Add it to the constructor
   }) : super(key: key);
@@ -21,7 +20,7 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class Transaction {
+class Transaction_ {
   final String id;
   final String name;
   final double amount;
@@ -31,7 +30,7 @@ class Transaction {
   final String icon;
   final String? description;
 
-  Transaction({
+  Transaction_({
     required this.id,
     required this.name,
     required this.amount,
@@ -55,8 +54,8 @@ class Transaction {
     };
   }
 
-  factory Transaction.fromMap(Map<String, dynamic> map, String documentId) {
-    return Transaction(
+  factory Transaction_.fromMap(Map<String, dynamic> map, String documentId) {
+    return Transaction_(
       id: documentId,
       name: map['name'],
       amount: map['amount'],
@@ -69,94 +68,8 @@ class Transaction {
   }
 }
 
-class MonthlySummaryScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> dailySummary;
-  final DateTime selectedMonth;
-
-  const MonthlySummaryScreen({
-    Key? key,
-    required this.dailySummary,
-    required this.selectedMonth,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Calculate dynamic height for GridView based on screen size
-    double gridHeight = MediaQuery.of(context).size.height * 0.5;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Summary for ${DateFormat('MMMM yyyy').format(selectedMonth)}"),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  "Monthly Summary",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-              // Wrapping GridView in a Container with calculated height
-              Container(
-                height: gridHeight, // Set the height for the GridView
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(), // Disable grid scrolling
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7, // 7 columns for days of the week
-                    childAspectRatio: 1.5,
-                  ),
-                  itemCount: dailySummary.length,
-                  itemBuilder: (context, index) {
-                    final daySummary = dailySummary[index];
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.all(4.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Day ${daySummary['day']}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Income: \$${daySummary['income'].toStringAsFixed(2)}',
-                              style: const TextStyle(color: Colors.green, fontSize: 12),
-                            ),
-                            Text(
-                              'Expense: \$${daySummary['expense'].toStringAsFixed(2)}',
-                              style: const TextStyle(color: Colors.red, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
 class _MainScreenState extends State<MainScreen> {
-  List<Transaction> transactions = [];
+  List<Transaction_> transactions = [];
   final TextEditingController _totalBalanceController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   double _remainingBudget = 0;
@@ -204,7 +117,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
 
-  Future<List<Transaction>> _fetchTransactions() async {
+  Future<List<Transaction_>> _fetchTransactions() async {
     User? user = _auth.currentUser;
     if (user == null) return [];
 
@@ -216,7 +129,7 @@ class _MainScreenState extends State<MainScreen> {
 
     return snapshot.docs
         .map((doc) =>
-        Transaction.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        Transaction_.fromMap(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
   }
 
@@ -224,7 +137,6 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _fetchBudgetData() async {
     User? user = _auth.currentUser;
     if (user != null) {
-      // Check if the "budgets" collection contains a "remaining" field
       DocumentSnapshot budgetDoc = await FirebaseFirestore.instance.collection(
           'budgets').doc(user.uid).get();
       if (budgetDoc.exists && budgetDoc.data() != null) {
@@ -233,7 +145,6 @@ class _MainScreenState extends State<MainScreen> {
         });
       }
 
-      // If "remaining" is not found in "budgets" or not set, check "503020" for "remainingBudget"
       if (_remainingBudget ==
           0) { // Only check if "_remainingBudget" hasn't been set
         DocumentSnapshot budget503020Doc = await FirebaseFirestore.instance
@@ -241,12 +152,11 @@ class _MainScreenState extends State<MainScreen> {
         if (budget503020Doc.exists && budget503020Doc.data() != null) {
           setState(() {
             _remainingBudget =
-                budget503020Doc['totalBudgetToSpend'] ?? _remainingBudget;
+                budget503020Doc['remainingBudget'] ?? _remainingBudget;
           });
         }
       }
 
-      // If neither "remaining" nor "remainingBudget" is found, check for "income" in "envelopeAllocations"
       if (_remainingBudget ==
           0) { // Only check if "_remainingBudget" hasn't been set
         DocumentSnapshot envelopeDoc = await FirebaseFirestore.instance
@@ -259,7 +169,6 @@ class _MainScreenState extends State<MainScreen> {
         }
       }
 
-      // If no other fields are found, check for "excessMoney" in the "PayYourselfFirst" collection
       if (_remainingBudget ==
           0) { // Only check if "_remainingBudget" hasn't been set
         DocumentSnapshot payYourselfFirstDoc = await FirebaseFirestore.instance
@@ -292,12 +201,12 @@ class _MainScreenState extends State<MainScreen> {
   }
 
 
-  List<Transaction> _getAllTransactions() {
-    List<Transaction> transactions = [];
+  List<Transaction_> _getAllTransactions() {
+    List<Transaction_> transactions = [];
 
     for (var expense in widget.expenses) {
       transactions.add(
-        Transaction(
+        Transaction_(
             name: expense.category.name,
             amount: expense.amount.toDouble(),
             date: expense.date,
@@ -312,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
 
     for (var income in widget.incomes) {
       transactions.add(
-        Transaction(
+        Transaction_(
             name: income.category2.name,
             amount: income.amount.toDouble(),
             date: income.date,
@@ -328,41 +237,9 @@ class _MainScreenState extends State<MainScreen> {
     return transactions;
   }
 
-  List<Map<String, dynamic>> _generateDailySummary(DateTime month) {
-    // Determine the number of days in the selected month
-    int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-
-    // Initialize a list to store daily income and expense summaries
-    List<Map<String, dynamic>> dailySummary = List.generate(
-        daysInMonth, (index) =>
-    {
-      'day': index + 1,
-      'income': 0.0,
-      'expense': 0.0,
-    });
-
-    // Calculate income and expenses for each day in the month
-    for (var transaction in transactions) {
-      if (transaction.date.year == month.year &&
-          transaction.date.month == month.month) {
-        int dayIndex = transaction.date.day - 1;
-
-        // Update income or expense for the specific day
-        if (transaction.isIncome) {
-          dailySummary[dayIndex]['income'] += transaction.amount;
-        } else {
-          dailySummary[dayIndex]['expense'] += transaction.amount;
-        }
-      }
-    }
-
-    return dailySummary;
-  }
-
-
   @override
   Widget build(BuildContext context) {
-    List<Transaction> transactions = _getAllTransactions();
+    List<Transaction_> transactions = _getAllTransactions();
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
@@ -439,34 +316,9 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 IconButton(
                   onPressed: () async {
-                    DateTime? selectedMonth = await showMonthPicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now(),
-                    );
-
-                    if (selectedMonth != null) {
-                      List<Map<String,
-                          dynamic>> dailySummary = _generateDailySummary(
-                          selectedMonth);
-
-                      // Navigate to MonthlySummaryScreen with daily summary
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              MonthlySummaryScreen(
-                                dailySummary: dailySummary,
-                                selectedMonth: selectedMonth,
-                              ),
-                        ),
-                      );
-                    }
                   },
                   icon: const Icon(CupertinoIcons.calendar),
                 ),
-
               ],
             ),
             const SizedBox(height: 20,),
@@ -633,9 +485,9 @@ class _MainScreenState extends State<MainScreen> {
                       MaterialPageRoute(
                         builder: (context) => TransactionHistory(
                           transactions: transactions,
-                          monthlyTransactions: [],),
+                          monthlyTransactions: [], expenses: [], incomes: [],
                       ),
-                    );
+                    ));
                   },
                   child: Text(
                     'View All',
@@ -760,7 +612,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _showTransactionDetailsDialog(BuildContext context, Transaction transaction) {
+  void _showTransactionDetailsDialog(BuildContext context, Transaction_ transaction) {
     showDialog(
       context: context,
       builder: (context) {
@@ -815,7 +667,6 @@ class _MainScreenState extends State<MainScreen> {
         }, SetOptions(merge: true));
       });
 
-      // Attempt to update the budgets collection if it exists
       final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(user.uid);
       final budgetSnapshot = await budgetDoc.get();
       if (budgetSnapshot.exists) {
@@ -826,7 +677,6 @@ class _MainScreenState extends State<MainScreen> {
         });
       }
 
-      // Delete the expense transaction
       FirebaseFirestore.instance
           .collection('expenses')
           .doc(expense.expenseId)
@@ -853,7 +703,6 @@ class _MainScreenState extends State<MainScreen> {
   void _deleteIncomeTransaction(Income income) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Update totalMoneyAmount in totalMoney collection
       final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(user.uid);
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final totalMoneySnapshot = await transaction.get(totalMoneyDoc);
@@ -866,7 +715,6 @@ class _MainScreenState extends State<MainScreen> {
         }, SetOptions(merge: true));
       });
 
-      // Attempt to update the budgets collection if it exists
       final budgetDoc = FirebaseFirestore.instance.collection('budgets').doc(user.uid);
       final budgetSnapshot = await budgetDoc.get();
       if (budgetSnapshot.exists) {
@@ -877,7 +725,6 @@ class _MainScreenState extends State<MainScreen> {
         });
       }
 
-      // Delete the income transaction
       FirebaseFirestore.instance
           .collection('incomes')
           .doc(income.incomeId)

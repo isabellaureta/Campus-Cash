@@ -228,12 +228,19 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     // Calculate remainingBudget based on totalBudget and totalExpenses
     final calculatedRemainingBudget = totalBudget - totalExpenses;
 
+    final needsBudget = totalBudget * 0.50;
+    final wantsBudget = totalBudget * 0.30;
+    final savingsBudget = totalBudget * 0.20;
+
     // Save basic budget info with updated remainingBudget
     await userDocRef.set({
       'userId': userId,
       'totalBudget': totalBudget,
       'totalExpenses': totalExpenses,                 // Preserve totalExpenses as fetched
       'remainingBudget': calculatedRemainingBudget,   // Update calculated remainingBudget
+      'needsBudget': needsBudget,        // Save Needs allocation
+      'wantsBudget': wantsBudget,        // Save Wants allocation
+      'savingsBudget': savingsBudget,    // Save Savings allocation
     }, SetOptions(merge: true));  // Use merge to avoid overwriting other fields
 
     // Save Needs categories with user-input amounts
