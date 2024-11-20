@@ -17,7 +17,6 @@ class BudgetInputPage extends StatefulWidget {
 class _BudgetInputPageState extends State<BudgetInputPage> {
   final _budgetController = TextEditingController();
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +40,7 @@ class _BudgetInputPageState extends State<BudgetInputPage> {
               totalBudget: totalBudget,
               totalExpenses: totalExpenses,
               remainingBudget: remainingBudget,
-              expenses: {}, // Fetch expenses from Firestore
+              expenses: {},
               userId: widget.userId,
             );
           }
@@ -107,19 +106,16 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   double _wantsExpenses = 0;
   double _savingsExpenses = 0;
 
-  // Track modified categories
   final Map<String, bool> _modifiedCategories = {};
   final List<Category2> savingsCategories = predefinedCategories2;
 
-  // Predefined category allocation for needs, wants, and savings
-  final Map<String, String> _expenses = {}; // User-input expenses per category
-  final Map<String, TextEditingController> _controllers = {}; // Controllers for input fields
+  final Map<String, String> _expenses = {};
+  final Map<String, TextEditingController> _controllers = {};
 
   List<Category> _getCategoriesForTab(Set<String> categoryIds) {
     return predefinedCategories.where((category) => categoryIds.contains(category.categoryId)).toList();
   }
 
-  // Predefined default categories for each tab
   Set<String> needsCategoryIds = {
     '011', '012', '013', '015', '017', '018', '023', '026', '038', '039'
   };
@@ -132,12 +128,9 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     '041'
   };
 
-
-
   List<Category2> _getSavingsCategoriesForTab(Set<String> categoryIds) {
     return predefinedCategories2.where((category) => categoryIds.contains(category.categoryId2)).toList();
   }
-
 
   @override
   void initState() {
@@ -147,7 +140,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   }
 
   void _initializeControllers() {
-    // Initialize controllers for the default categories in each tab
     needsCategoryIds.forEach((categoryId) {
       _controllers[categoryId] = TextEditingController();
     });
@@ -175,7 +167,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
 
       double previousAmount = double.tryParse(_expenses[categoryId] ?? '0') ?? 0;
       double newTotalExpenses = currentTabExpenses - previousAmount + parsedAmount;
-
       if (newTotalExpenses > tabBudget) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$tabName balance limit exceeded!')),
@@ -189,25 +180,20 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       _expenses[categoryId] = amount;
       _modifiedCategories[categoryId] = true;
 
-      // Update individual category expenses
       _needsExpenses = _calculateCategoryExpenses(needsCategoryIds);
       _wantsExpenses = _calculateCategoryExpenses(wantsCategoryIds);
       _savingsExpenses = _calculateCategoryExpenses(savingsCategoryIds);
 
-      // Update the Firestore document for the category
       _adjustTotalBudgetAfterExpense(tabName, parsedAmount);
-
-      // If the categoryId exists in predefined sets, update the corresponding Firestore collection
       String categoryType = (needsCategoryIds.contains(categoryId))
           ? 'Needs'
           : (wantsCategoryIds.contains(categoryId))
           ? 'Wants'
           : (savingsCategoryIds.contains(categoryId))
           ? 'Savings'
-          : 'Custom';  // Handle non-predefined categories
+          : 'Custom';
 
       if (categoryType != 'Custom') {
-
         _updateCategoryBudget(widget.userId, categoryType, categoryId, parsedAmount.toInt());
       }
     });
@@ -217,33 +203,27 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     final userId = widget.userId;
     final firestore = FirebaseFirestore.instance;
     final userDocRef = firestore.collection('503020').doc(userId);
-
-    // Attempt to fetch the document to check for existence
     final snapshot = await userDocRef.get();
 
-    // Initialize totalBudget and totalExpenses based on existing document or default values
     final totalBudget = snapshot.exists ? (snapshot['totalBudget'] ?? widget.totalBudget) : widget.totalBudget;
     final totalExpenses = snapshot.exists ? (snapshot['totalExpenses'] ?? 0.0) : 0.0;
 
-    // Calculate remainingBudget based on totalBudget and totalExpenses
     final calculatedRemainingBudget = totalBudget - totalExpenses;
 
     final needsBudget = totalBudget * 0.50;
     final wantsBudget = totalBudget * 0.30;
     final savingsBudget = totalBudget * 0.20;
 
-    // Save basic budget info with updated remainingBudget
     await userDocRef.set({
       'userId': userId,
       'totalBudget': totalBudget,
-      'totalExpenses': totalExpenses,                 // Preserve totalExpenses as fetched
-      'remainingBudget': calculatedRemainingBudget,   // Update calculated remainingBudget
-      'needsBudget': needsBudget,        // Save Needs allocation
-      'wantsBudget': wantsBudget,        // Save Wants allocation
-      'savingsBudget': savingsBudget,    // Save Savings allocation
-    }, SetOptions(merge: true));  // Use merge to avoid overwriting other fields
+      'totalExpenses': totalExpenses,
+      'remainingBudget': calculatedRemainingBudget,
+      'needsBudget': needsBudget,
+      'wantsBudget': wantsBudget,
+      'savingsBudget': savingsBudget,
+    }, SetOptions(merge: true));
 
-    // Save Needs categories with user-input amounts
     final needsCollectionRef = userDocRef.collection('Needs');
     for (String categoryId in needsCategoryIds) {
       if (_expenses[categoryId] != null && _expenses[categoryId]!.isNotEmpty) {
@@ -260,7 +240,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       }
     }
 
-    // Save Wants categories with user-input amounts
     final wantsCollectionRef = userDocRef.collection('Wants');
     for (String categoryId in wantsCategoryIds) {
       if (_expenses[categoryId] != null && _expenses[categoryId]!.isNotEmpty) {
@@ -277,7 +256,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       }
     }
 
-    // Save Savings categories with user-input amounts
     final savingsCollectionRef = userDocRef.collection('Savings');
     for (String categoryId in savingsCategoryIds) {
       if (_expenses[categoryId] != null && _expenses[categoryId]!.isNotEmpty) {
@@ -293,7 +271,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       }
     }
 
-    // After saving, navigate to the BudgetSummaryPage
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -312,16 +289,12 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   Future<void> _adjustTotalBudgetAfterExpense(String categoryName, double amount) async {
     final userId = widget.userId;
     final userDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
-
-    // Get the current total budget and expenses
     DocumentSnapshot snapshot = await userDocRef.get();
     if (snapshot.exists) {
       double totalBudget = snapshot['totalBudget'] ?? 0.0;
       double totalExpenses = snapshot['totalExpenses'] ?? 0.0;
 
-      // Update the total expenses and remaining budget
       totalExpenses += amount;
-
       await userDocRef.update({
         'totalExpenses': totalExpenses,
         'remainingBudget': totalBudget - totalExpenses,
@@ -332,19 +305,13 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   Future<void> _updateCategoryBudget(String userId, String categoryType, String categoryId, int expenseAmount) async {
     try {
       final budgetDocRef = FirebaseFirestore.instance.collection('503020').doc(userId);
-
-      // Fetch the specific category document in Firestore
       DocumentSnapshot categoryDoc = await budgetDocRef.collection(categoryType).doc(categoryId).get();
 
       if (categoryDoc.exists) {
         Map<String, dynamic> categoryData = categoryDoc.data() as Map<String, dynamic>;
         double currentAmount = categoryData['amount'] ?? 0.0;
-
-        // Deduct the expense amount from the category's amount
         double updatedAmount = currentAmount - expenseAmount;
-        if (updatedAmount < 0) updatedAmount = 0;  // Ensure it doesn't go negative
-
-        // Update Firestore with the new amount
+        if (updatedAmount < 0) updatedAmount = 0;
         await budgetDocRef.collection(categoryType).doc(categoryId).update({
           'amount': updatedAmount,
         });
@@ -365,15 +332,15 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     if (currentTabIndex == 0) {
       currentTabCategories = needsCategoryIds;
       categoryType = "Needs";
-      selectableCategories = predefinedCategories; // Use Category list for needs
+      selectableCategories = predefinedCategories;
     } else if (currentTabIndex == 1) {
       currentTabCategories = wantsCategoryIds;
       categoryType = "Wants";
-      selectableCategories = predefinedCategories; // Use Category list for wants
+      selectableCategories = predefinedCategories;
     } else {
       currentTabCategories = savingsCategoryIds;
       categoryType = "Savings";
-      selectableCategories = predefinedCategories2; // Use Category2 list for savings
+      selectableCategories = predefinedCategories2;
     }
 
     showModalBottomSheet(
@@ -397,7 +364,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
                         final isAlreadyInAnotherTab = needsCategoryIds.contains(categoryId) ||
                             wantsCategoryIds.contains(categoryId) ||
                             savingsCategoryIds.contains(categoryId);
-
                         return CheckboxListTile(
                           title: Text(category.name),
                           value: isSelected,
@@ -423,7 +389,6 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        // Trigger rebuild with updated categories for the current tab
                       });
                       Navigator.pop(context);
                     },
@@ -439,10 +404,7 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   }
 
   Widget _buildBudgetSummary() {
-    // Calculate Total Budget to Spend as the sum of Needs and Wants budgets
     final totalBudgetToSpend = widget.totalBudget * 0.50 + widget.totalBudget * 0.30;
-
-    // Calculate Remaining Budget based on Total Budget to Spend minus Total Expenses
     final remainingBudget = totalBudgetToSpend - _totalExpenses;
 
     return Padding(
@@ -464,36 +426,27 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
             'Total Expenses: ₱${_totalExpenses.toStringAsFixed(2)}',
             style: TextStyle(fontSize: 16),
           ),
-          SizedBox(height: 8.0),
-          Text(
-            'Remaining Budget: ₱${remainingBudget.toStringAsFixed(2)}',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-          ),
           SizedBox(height: 16.0),
         ],
       ),
     );
   }
 
-
   Widget _buildCategoryTab(String categoryName, double budget, double expenses, List<dynamic> categories) {
-    // Use predefined categories specifically for the "Savings" tab
     final List<dynamic> tabCategories = (categoryName == 'Savings')
-        ? _getSavingsCategoriesForTab(savingsCategoryIds) // Use predefinedCategories2 for Savings
+        ? _getSavingsCategoriesForTab(savingsCategoryIds)
         : categories;
-
     final double progress = expenses / budget;
 
-    // Determine color based on the progress
     Color progressColor;
     if (progress >= 0.90) {
-      progressColor = Colors.red;  // Red when almost reaching or exceeding the budget
+      progressColor = Colors.red;
     } else if (progress >= 0.75) {
-      progressColor = Colors.orange.shade700;  // Orange when nearing the budget
+      progressColor = Colors.orange.shade700;
     } else if (progress >= 0.60) {
-      progressColor = Colors.yellow.shade700;  // Yellow when nearing the budget
+      progressColor = Colors.yellow.shade700;
     } else {
-      progressColor = Colors.blue;  // Blue when safely within the budget
+      progressColor = Colors.blue;
     }
 
     return Padding(
@@ -521,12 +474,10 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
               itemBuilder: (context, index) {
                 final category = tabCategories[index];
 
-                // Determine category properties for both Category and Category2 types
                 final categoryId = category is Category ? category.categoryId : category.categoryId2;
                 final categoryName = category.name;
                 final categoryIcon = category.icon;
 
-                // Ensure TextEditingController exists for each category
                 if (!_controllers.containsKey(categoryId)) {
                   _controllers[categoryId] = TextEditingController();
                 }
@@ -536,11 +487,11 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
 
                 return ListTile(
                   leading: Image.asset(
-                    categoryIcon, // Use the predefined icon or fallback
+                    categoryIcon,
                     width: 24.0,
                     height: 24.0,
                   ),
-                  title: Text(categoryName), // Use the predefined name or fallback
+                  title: Text(categoryName),
                   trailing: SizedBox(
                     width: 100,
                     child: TextField(
@@ -553,14 +504,12 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
                       onChanged: (value) {
                         final textSelection = _expenseController.selection;
 
-                        // Pass the correct budget and tab name to _updateExpense
                         _updateExpense(
                           categoryId,
                           value,
                           budget,  // Pass the budget for this tab
                           categoryName,  // Pass the tab name for error messaging
                         );
-
                         _expenseController.value = _expenseController.value.copyWith(
                           selection: textSelection,
                         );
@@ -587,11 +536,10 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       appBar: AppBar(
         title: Text('50-30-20 Budget Allocation'),
         actions: [
-          // Disable edit option for the Savings tab
           if (_tabController.index != 2)
             IconButton(
               icon: Icon(Icons.edit),
-              onPressed: () => _showEditCategoryPopup(context), // Open category selection popup
+              onPressed: () => _showEditCategoryPopup(context),
             ),
           IconButton(
             icon: Icon(Icons.save),
@@ -640,4 +588,3 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
     );
   }
 }
-

@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:campuscash/screens/addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
@@ -10,11 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-import 'category_creation.dart';
 
 class AddIncome extends StatefulWidget {
   const AddIncome({super.key});
-
   @override
   State<AddIncome> createState() => _AddIncomeState();
 }
@@ -24,7 +21,6 @@ class _AddIncomeState extends State<AddIncome> {
   TextEditingController categoryController = TextEditingController();
   TextEditingController dateController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
-
   late Income income;
   bool isLoading = false;
 
@@ -38,29 +34,24 @@ class _AddIncomeState extends State<AddIncome> {
 
   Future<bool> checkIfBudgetExists(String userId) async {
     final firestore = FirebaseFirestore.instance;
-
-    // Define the document references for each required budget technique
     final budgetDoc = firestore.collection('budgets').doc(userId);
     final budgetingDoc503020 = firestore.collection('503020').doc(userId);
     final envelopeAllocationsDoc = firestore.collection('envelopeAllocations').doc(userId);
     final payYourselfFirstDoc = firestore.collection('PayYourselfFirst').doc(userId);
     final priorityBasedDoc = firestore.collection('PriorityBased').doc(userId);
 
-    // Check each document for existence
     final budgetSnapshot = await budgetDoc.get();
     final budgeting503020Snapshot = await budgetingDoc503020.get();
     final envelopeAllocationsSnapshot = await envelopeAllocationsDoc.get();
     final payYourselfFirstSnapshot = await payYourselfFirstDoc.get();
     final priorityBasedSnapshot = await priorityBasedDoc.get();
 
-    // Return true if at least one budgeting technique exists, false if all are missing
     return budgetSnapshot.exists ||
         budgeting503020Snapshot.exists ||
         envelopeAllocationsSnapshot.exists ||
         payYourselfFirstSnapshot.exists ||
         priorityBasedSnapshot.exists;
   }
-
 
   void showAlertDialog(BuildContext context, String message) {
     showDialog(
@@ -81,7 +72,6 @@ class _AddIncomeState extends State<AddIncome> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -110,12 +100,8 @@ class _AddIncomeState extends State<AddIncome> {
                 children: [
                   const Text(
                     "Add Income",
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),),
+                  const SizedBox(height: 16,),
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.7,
                     child: TextFormField(
@@ -140,9 +126,7 @@ class _AddIncomeState extends State<AddIncome> {
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 32,
-                  ),
+                  const SizedBox(height: 32,),
                   TextFormField(
                     controller: categoryController,
                     textAlignVertical: TextAlignVertical.center,
@@ -163,18 +147,6 @@ class _AddIncomeState extends State<AddIncome> {
                         '${income.category2.icon}',
                         scale: 2,
                       ),
-                      suffixIcon: IconButton(
-                          onPressed: () async {
-                            var newCategory = await getCategoryCreation(context);
-                            setState(() {
-                              predefinedCategories2.insert(0, newCategory);
-                            });
-                          },
-                          icon: const Icon(
-                            FontAwesomeIcons.plus,
-                            size: 16,
-                            color: Colors.grey,
-                          )),
                       hintText: 'Category',
                       border: const OutlineInputBorder(
                           borderRadius: BorderRadius.vertical(
@@ -230,9 +202,7 @@ class _AddIncomeState extends State<AddIncome> {
                                 Center(
                                   child: Text(
                                     predefinedCategories2[i].name,
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
@@ -242,9 +212,7 @@ class _AddIncomeState extends State<AddIncome> {
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                  const SizedBox(height: 16,),
                   TextFormField(
                     controller: dateController,
                     textAlignVertical: TextAlignVertical.center,
@@ -256,7 +224,6 @@ class _AddIncomeState extends State<AddIncome> {
                           firstDate: DateTime(1900),
                           lastDate: DateTime.now()
                               .add(const Duration(days: 365)));
-
                       if (newDate != null) {
                         setState(() {
                           dateController.text =
@@ -279,9 +246,7 @@ class _AddIncomeState extends State<AddIncome> {
                           borderSide: BorderSide.none),
                     ),
                   ),
-                  const SizedBox(
-                    height: 32,
-                  ),
+                  const SizedBox(height: 32,),
                   TextFormField(
                     controller: descriptionController,
                     textAlignVertical: TextAlignVertical.center,
@@ -314,31 +279,18 @@ class _AddIncomeState extends State<AddIncome> {
                             log('No authenticated user found.');
                             return;
                           }
-
-                          // Check if any budget or budgeting technique document exists
-                          final budgetExists = await checkIfBudgetExists(user.uid);
-
-
-                          // If a budget document exists, proceed with saving the income
                           setState(() {
                             income.amount = int.parse(incomeController.text);
-                            income.description = descriptionController.text;  // Set description from the controller
-
+                            income.description = descriptionController.text;
                           });
-
                           context.read<CreateIncomeBloc>().add(CreateIncome(income));
                         },
-
-
                         style: TextButton.styleFrom(
                             backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                                 borderRadius:
                                 BorderRadius.circular(12))),
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(
-                              fontSize: 22, color: Colors.white),
+                        child: const Text('Save', style: TextStyle(fontSize: 22, color: Colors.white),
                         )),
                   ),
                 ],

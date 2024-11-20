@@ -1,11 +1,10 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:campuscash/auth/auth_exceptions.dart';
 import 'package:campuscash/auth/bloc/auth_bloc.dart';
 import 'package:campuscash/auth/bloc/auth_event.dart';
 import 'package:campuscash/auth/bloc/auth_state.dart';
 import 'package:campuscash/constants/colors.dart';
 import 'package:campuscash/utilities/dialogs/error_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -229,24 +228,92 @@ class _RegisterViewState extends State<RegisterView> {
                     SizedBox(
                       width: 225.0,
                       child: FilledButton(
-                        onPressed: () async {
-                          final email = _emailController.text;
-                          final password = _passwordController.text;
-                          final confirmPassword =
-                              _confirmPasswordController.text;
 
-                          if (password == confirmPassword) {
-                            context.read<AuthBloc>().add(
-                                  AuthEventRegister(
-                                    email,
-                                    password,
+                        onPressed: () async {
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text.trim();
+                          final confirmPassword = _confirmPasswordController.text.trim();
+
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Invalid Email'),
+                                content: const Text('The email address format is invalid.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('OK'),
                                   ),
-                                );
-                          } else {
-                            setState(
-                              () {
-                                _passwordMatch = password == confirmPassword;
-                              },
+                                ],
+                              ),
+                            );
+                            return;
+                          }
+                          if (password != confirmPassword) {
+                            setState(() {
+                              _passwordMatch = false;
+                            });
+                            return;
+                          }
+                          try {
+                            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                              email: email,
+                              password: password,
+                            );
+                            context.read<AuthBloc>().add(
+                              AuthEventRegister(
+                                email,
+                                password,
+                              ),
+                            );
+                          } on FirebaseAuthException catch (e) {
+                            if (e.code == 'email-already-in-use') {
+                              // Show popup for email already in use
+                              await showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Email Already in Use'),
+                                  content: const Text(
+                                      'The email address you entered is already associated with an account.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              await showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Registration Error'),
+                                  content: Text(
+                                      'An error occurred: ${e.message ?? "Please try again later."}'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Error'),
+                                content: const Text(
+                                    'An unexpected error occurred. Please try again later.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
                             );
                           }
                         },
@@ -265,9 +332,7 @@ class _RegisterViewState extends State<RegisterView> {
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      height: 25.0,
-                    ),
+                    const SizedBox(height: 25.0,),
                     TextButton(
                       onPressed: () {
                         context.read<AuthBloc>().add(

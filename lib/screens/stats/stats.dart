@@ -6,9 +6,7 @@ import 'package:intl/intl.dart';
 class ChartScreen extends StatefulWidget {
   final List<Expense> expenses;
   final List<Income> income;
-
   const ChartScreen({Key? key, required this.expenses, required this.income}) : super(key: key);
-
   @override
   _ChartScreenState createState() => _ChartScreenState();
 }
@@ -44,19 +42,15 @@ class _ChartScreenState extends State<ChartScreen> {
           );
           break;
         case 'All Time':
-
           break;
       }
       generateChartData();
     });
   }
 
-
-
   void generateChartData() {
     Map<String, ChartData> aggregatedData = {};
     DateTime weekEndDate = selectedDate.add(Duration(days: 6));
-
     dailyExpenseData = {};
     dailyIncomeData = {};
 
@@ -83,7 +77,6 @@ class _ChartScreenState extends State<ChartScreen> {
 
       if (isIncluded) {
         if (selectedType == 'Expenses') {
-
           if (aggregatedData.containsKey(expense.category.name)) {
             aggregatedData[expense.category.name]!.totalAmount += expense.amount;
           } else {
@@ -95,7 +88,6 @@ class _ChartScreenState extends State<ChartScreen> {
             );
           }
         } else if (selectedType == 'Expense Flow' || selectedType == 'Transaction Analysis') {
-
           DateTime day = DateTime(expense.date.year, expense.date.month, expense.date.day);
           dailyExpenseData.update(
             day,
@@ -141,7 +133,6 @@ class _ChartScreenState extends State<ChartScreen> {
               );
             }
           } else if (selectedType == 'Income Flow' || selectedType == 'Transaction Analysis') {
-
             DateTime day = DateTime(income.date.year, income.date.month, income.date.day);
             dailyIncomeData.update(
               day,
@@ -156,14 +147,73 @@ class _ChartScreenState extends State<ChartScreen> {
       chartData = (selectedType == 'Expense Flow' || selectedType == 'Income Flow' || selectedType == 'Transaction Analysis')
           ? []
           : aggregatedData.values.toList();
+      calculateTotalExpenses();
+      calculateTotalIncome();
     });
   }
 
-
-
-
   double getTotalAmount() {
     return chartData.fold(0, (sum, item) => sum + item.totalAmount);
+  }
+
+  double calculateTotalExpenses() {
+    double total = 0;
+    for (var expense in widget.expenses) {
+      bool isIncluded = false;
+      switch (selectedView) {
+        case 'Daily':
+          isIncluded = expense.date.year == selectedDate.year &&
+              expense.date.month == selectedDate.month &&
+              expense.date.day == selectedDate.day;
+          break;
+        case 'Weekly':
+          DateTime weekEndDate = selectedDate.add(Duration(days: 6));
+          isIncluded = expense.date.isAfter(selectedDate.subtract(const Duration(days: 1))) &&
+              expense.date.isBefore(weekEndDate.add(const Duration(days: 1)));
+          break;
+        case 'Monthly':
+          isIncluded = expense.date.year == selectedDate.year &&
+              expense.date.month == selectedDate.month;
+          break;
+        case 'All Time':
+          isIncluded = true;
+          break;
+      }
+      if (isIncluded) {
+        total += expense.amount.toDouble();
+      }
+    }
+    return total;
+  }
+
+  double calculateTotalIncome() {
+    double total = 0;
+    for (var income in widget.income) {
+      bool isIncluded = false;
+      switch (selectedView) {
+        case 'Daily':
+          isIncluded = income.date.year == selectedDate.year &&
+              income.date.month == selectedDate.month &&
+              income.date.day == selectedDate.day;
+          break;
+        case 'Weekly':
+          DateTime weekEndDate = selectedDate.add(Duration(days: 6));
+          isIncluded = income.date.isAfter(selectedDate.subtract(const Duration(days: 1))) &&
+              income.date.isBefore(weekEndDate.add(const Duration(days: 1)));
+          break;
+        case 'Monthly':
+          isIncluded = income.date.year == selectedDate.year &&
+              income.date.month == selectedDate.month;
+          break;
+        case 'All Time':
+          isIncluded = true;
+          break;
+      }
+      if (isIncluded) {
+        total += income.amount.toDouble();
+      }
+    }
+    return total;
   }
 
   @override
@@ -186,7 +236,6 @@ class _ChartScreenState extends State<ChartScreen> {
         break;
     }
     double totalAmount = getTotalAmount();
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Transaction Statistics'),
@@ -228,7 +277,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     style: TextStyle(color: Colors.red, fontSize: 14),
                   ),
                   Text(
-                    '\₱550.00  ',
+                    '\₱${calculateTotalExpenses().toStringAsFixed(2)}',
                     style: TextStyle(color: Colors.red, fontSize: 20),
                   ),
                 ],
@@ -241,7 +290,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     style: TextStyle(color: Colors.green, fontSize: 14),
                   ),
                   Text(
-                    '    \₱147.00',
+                    '\₱${calculateTotalIncome().toStringAsFixed(2)}',
                     style: TextStyle(color: Colors.green, fontSize: 20),
                   ),
                 ],
@@ -321,7 +370,7 @@ class _ChartScreenState extends State<ChartScreen> {
             ),
             if (selectedType == 'Transaction Analysis')
               SizedBox(
-                height: 300,  // Define the height here using SizedBox
+                height: 300,
                 child: SfCartesianChart(
                   primaryXAxis: DateTimeAxis(dateFormat: DateFormat.yMMMd()),
                   primaryYAxis: NumericAxis(labelFormat: '\₱{value}'),
@@ -344,7 +393,6 @@ class _ChartScreenState extends State<ChartScreen> {
                   ],
                 ),
               ),
-
 
             if (selectedType == 'Expense Flow')
               Padding(
@@ -392,7 +440,6 @@ class _ChartScreenState extends State<ChartScreen> {
               ),
             Flexible(
               child: SfCircularChart(
-
                 series: <CircularSeries>[
                   PieSeries<ChartData, String>(
                     dataSource: chartData,
@@ -422,11 +469,9 @@ class _ChartScreenState extends State<ChartScreen> {
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   children: [
-
                   ],
                 ),
               ),
-
             ...chartData.map((data) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -522,12 +567,10 @@ class _ChartScreenState extends State<ChartScreen> {
   }
 }
 
-
 class ChartData {
   final String categoryName;
   int totalAmount;
   final int color;
   final String icon;
-
   ChartData(this.categoryName, this.totalAmount, this.color, this.icon);
 }

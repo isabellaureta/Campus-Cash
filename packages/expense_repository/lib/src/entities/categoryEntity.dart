@@ -4,7 +4,6 @@ class CategoryEntity {
   String icon;
   int color;
 
-
   CategoryEntity({
     required this.categoryId,
     required this.name,
@@ -30,7 +29,6 @@ class CategoryEntity {
     );
   }
 }
-
 
 class CategoryEntity2 {
   String categoryId2;

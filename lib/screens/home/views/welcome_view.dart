@@ -31,18 +31,14 @@ class WelcomeView extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 25.0,
-              ),
+              const SizedBox(height: 25.0,),
               Text(
                 AppLocalizations.of(context)!.welcome_view,
                 textAlign: TextAlign.center,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
-              const SizedBox(
-                height: 25.0,
-              ),
+              const SizedBox(height: 25.0,),
               SizedBox(
                 width: 300.0,
                 child: Text(
@@ -61,9 +57,7 @@ class WelcomeView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(
-                height: 50,
-              ),
+              const SizedBox(height: 50,),
               SizedBox(
                 width: 225.0,
                 child: FilledButton(
@@ -110,9 +104,7 @@ class WelcomeView extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 75.0,
-              )
+              const SizedBox(height: 75.0,)
             ],
           ),
         ),

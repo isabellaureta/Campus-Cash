@@ -6,7 +6,6 @@ class LoadingScreen {
   factory LoadingScreen() => _shared;
   static final LoadingScreen _shared = LoadingScreen._sharedInstance();
   LoadingScreen._sharedInstance();
-
   LoadingScreenController? controller;
 
   void show({
@@ -32,10 +31,8 @@ class LoadingScreen {
     required BuildContext context,
     required String text,
   }) {
-    // ignore: no_leading_underscores_for_local_identifiers
     final _text = StreamController<String>();
     _text.add(text);
-
     final state = Overlay.of(context);
     final renderBox = context.findRenderObject() as RenderBox;
     final size = renderBox.size;
@@ -91,9 +88,7 @@ class LoadingScreen {
         );
       }),
     );
-
     state.insert(overlay);
-
     return LoadingScreenController(
       close: () {
         _text.close();

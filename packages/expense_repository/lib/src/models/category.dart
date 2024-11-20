@@ -39,9 +39,6 @@ class Category {
   }
 }
 
-
-
-
 class Category2 {
   String categoryId2;
   String name;

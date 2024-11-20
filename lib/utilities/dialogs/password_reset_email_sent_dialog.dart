@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:campuscash/auth/bloc/auth_bloc.dart';
 import 'package:campuscash/auth/bloc/auth_event.dart';
 import 'package:campuscash/utilities/dialogs/generic_dialog.dart';
@@ -17,5 +16,5 @@ Future<void> showPasswordResetSentDialog(BuildContext context) {
             'OK': () {
               context.read<AuthBloc>().add(const AuthEventLogOut());
             }
-          });
+      });
 }

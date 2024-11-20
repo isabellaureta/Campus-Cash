@@ -5,7 +5,6 @@ import 'package:campuscash/auth/auth_provider.dart' as auth_provider;
 class AuthService implements auth_provider.AuthProvider {
   final auth_provider.AuthProvider provider;
   const AuthService(this.provider);
-
   factory AuthService.firebase() => AuthService(firebase.FirebaseAuthProvider());
 
   @override

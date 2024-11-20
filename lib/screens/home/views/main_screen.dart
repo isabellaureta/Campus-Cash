@@ -75,7 +75,7 @@ class _MainScreenState extends State<MainScreen> {
   double _remainingBudget = 0;
   String _userName = '';
   double _totalExpenses = 0;
-  String? _profileImageUrl; // Declare the profile image URL variable
+  String? _profileImageUrl;
   double _totalBalance = 0.0;
 
   @override
@@ -93,17 +93,15 @@ class _MainScreenState extends State<MainScreen> {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection(
           'users').doc(user.uid).get();
       setState(() {
-        _userName = userDoc['name'] ?? 'John Doe'; // Set the fetched name
+        _userName = userDoc['name'] ?? 'John Doe';
         _profileImageUrl =
-        userDoc['profileImageUrl']; // Fetch the profile image URL
+        userDoc['profileImageUrl'];
       });
     }
   }
 
   Future<void> _loadTransactions() async {
     transactions = await _fetchTransactions();
-
-    // Calculate total expenses by summing up all non-income transactions
     double totalExpenses = 0;
     for (var transaction in transactions) {
       if (!transaction.isIncome) {
@@ -112,27 +110,23 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     setState(() {
-      _totalExpenses = totalExpenses; // Update the total expenses
+      _totalExpenses = totalExpenses;
     });
   }
-
 
   Future<List<Transaction_>> _fetchTransactions() async {
     User? user = _auth.currentUser;
     if (user == null) return [];
-
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('transactions')
         .get();
-
     return snapshot.docs
         .map((doc) =>
         Transaction_.fromMap(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
   }
-
 
   Future<void> _fetchBudgetData() async {
     User? user = _auth.currentUser;
@@ -146,7 +140,7 @@ class _MainScreenState extends State<MainScreen> {
       }
 
       if (_remainingBudget ==
-          0) { // Only check if "_remainingBudget" hasn't been set
+          0) {
         DocumentSnapshot budget503020Doc = await FirebaseFirestore.instance
             .collection('503020').doc(user.uid).get();
         if (budget503020Doc.exists && budget503020Doc.data() != null) {
@@ -158,7 +152,7 @@ class _MainScreenState extends State<MainScreen> {
       }
 
       if (_remainingBudget ==
-          0) { // Only check if "_remainingBudget" hasn't been set
+          0) {
         DocumentSnapshot envelopeDoc = await FirebaseFirestore.instance
             .collection('envelopeAllocations').doc(user.uid).get();
         if (envelopeDoc.exists && envelopeDoc.data() != null) {
@@ -170,7 +164,7 @@ class _MainScreenState extends State<MainScreen> {
       }
 
       if (_remainingBudget ==
-          0) { // Only check if "_remainingBudget" hasn't been set
+          0) {
         DocumentSnapshot payYourselfFirstDoc = await FirebaseFirestore.instance
             .collection('PayYourselfFirst').doc(user.uid).get();
         if (payYourselfFirstDoc.exists && payYourselfFirstDoc.data() != null) {
@@ -186,11 +180,9 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> fetchTotalMoney() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-
     final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney')
         .doc(user.uid);
     final snapshot = await totalMoneyDoc.get();
-
     if (snapshot.exists) {
       setState(() {
         _totalBalance = snapshot['totalMoneyAmount'] ?? 0.0;
@@ -200,10 +192,8 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-
   List<Transaction_> _getAllTransactions() {
     List<Transaction_> transactions = [];
-
     for (var expense in widget.expenses) {
       transactions.add(
         Transaction_(
@@ -218,7 +208,6 @@ class _MainScreenState extends State<MainScreen> {
         ),
       );
     }
-
     for (var income in widget.incomes) {
       transactions.add(
         Transaction_(
@@ -246,7 +235,6 @@ class _MainScreenState extends State<MainScreen> {
         child: Column(
           children: [
             const SizedBox(height: 19,),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -281,9 +269,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                         ),
                       ],
-
                     ),
-
                     const SizedBox(width: 8,),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,10 +398,8 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                   transform: const GradientRotation(pi / 4),
                 ),
-                // White background
                 borderRadius: BorderRadius.circular(25),
                 border: Border.all(color: Colors.grey.shade300, width: 1),
-                // Grey border
                 boxShadow: [
                   BoxShadow(
                     blurRadius: 6,
@@ -433,7 +417,7 @@ class _MainScreenState extends State<MainScreen> {
                       'Budget Balance',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.black, // Black text for contrast
+                        color: Colors.black,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -444,7 +428,7 @@ class _MainScreenState extends State<MainScreen> {
                       style: TextStyle(
                         fontSize: 40,
                         color: _remainingBudget < 0 ? Colors.redAccent : Colors
-                            .black, // Red if negative
+                            .black,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -461,7 +445,6 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -479,15 +462,12 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Navigate to TransactionHistory screen
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
+                        context,
+                        MaterialPageRoute(
                         builder: (context) => TransactionHistory(
-                          transactions: transactions,
-                          monthlyTransactions: [], expenses: [], incomes: [],
-                      ),
-                    ));
+                      transactions: transactions,
+                    ),));
                   },
                   child: Text(
                     'View All',
@@ -503,7 +483,6 @@ class _MainScreenState extends State<MainScreen> {
                 )
               ],
             ),
-
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
@@ -525,7 +504,6 @@ class _MainScreenState extends State<MainScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Transaction info (existing code)
                                 Row(
                                   children: [
                                     Stack(
@@ -560,7 +538,6 @@ class _MainScreenState extends State<MainScreen> {
                                     ),
                                   ],
                                 ),
-                                // Amount and date (existing code)
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -747,7 +724,6 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
   }
-
 
   void _showDeleteExpenseConfirmationDialog(BuildContext context, Expense expense) {
     showDialog(

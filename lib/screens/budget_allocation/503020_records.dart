@@ -32,35 +32,27 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     final firestore = FirebaseFirestore.instance;
     final userDocRef = firestore.collection('503020').doc(widget.userId);
 
-    // Fetch the user's main budget document
     final budgetSnapshot = await userDocRef.get();
     final budgetData = budgetSnapshot.data() ?? {};
 
-    // Retrieve the stored budget values or set defaults
     final totalBudget = budgetData['totalBudget'] ?? 0.0;
 
-    // Calculate Needs and Wants budget as percentages of totalBudget
     final needsBudget = totalBudget * 0.50;
     final wantsBudget = totalBudget * 0.30;
     final savingsBudget = totalBudget * 0.20;
 
-    // Calculate initial totalBudgetToSpend as sum of Needs and Wants
     double totalBudgetToSpend = totalBudget * 0.50 + totalBudget * 0.30;;
 
-    // Calculate the totalExpenses based on the differences between originalAmount and amount
     double computedTotalExpenses = 0.0;
 
-    // Retrieve Needs and Wants categories from Firestore
     final needsSnapshot = await userDocRef.collection('Needs').get();
     final wantsSnapshot = await userDocRef.collection('Wants').get();
     final savingsSnapshot = await userDocRef.collection('Savings').get();
 
-    // List of needs and wants categories
     final needsCategories = needsSnapshot.docs.map((doc) => doc.data()).toList();
     final wantsCategories = wantsSnapshot.docs.map((doc) => doc.data()).toList();
     final savingsCategories = savingsSnapshot.docs.map((doc) => doc.data()).toList();
 
-    // Compute total expenses by summing the differences in Needs and Wants categories
     for (var category in needsCategories) {
       final originalAmount = category['originalAmount'] ?? 0.0;
       final amount = category['amount'] ?? 0.0;
@@ -73,23 +65,17 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
       computedTotalExpenses += (originalAmount - amount).abs();
     }
 
-    // Update the `totalExpenses` in Firestore with the computed value
     await userDocRef.update({'totalExpenses': computedTotalExpenses});
 
-    // Calculate remaining budget based on updated totalExpenses
     final calculatedRemainingBudget = totalBudgetToSpend - computedTotalExpenses;
 
-    // Update remaining budget in Firestore if needed
     if (budgetData['remainingBudget'] != calculatedRemainingBudget) {
       await userDocRef.update({'remainingBudget': calculatedRemainingBudget});
     }
-
-    // Fetch total deductions for each category type
     final totalNeedsDeductions = await _fetchTotalDeductions(userDocRef, 'Needs');
     final totalWantsDeductions = await _fetchTotalDeductions(userDocRef, 'Wants');
     final totalSavingsDeductions = await _fetchTotalDeductions(userDocRef, 'Savings');
 
-    // Save updated budget info back to Firestore with merged settings to avoid overwriting
     await userDocRef.set({
       'userId': widget.userId,
       'totalBudget': totalBudget,
@@ -98,12 +84,10 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
       'totalBudgetToSpend': totalBudgetToSpend,
     }, SetOptions(merge: true));
 
-    // Check and alert if any category limit is reached
     _checkCategoryLimits(needsCategories, 'Needs');
     _checkCategoryLimits(wantsCategories, 'Wants');
     _checkCategoryLimits(savingsCategories, 'Savings');
 
-    // Return a structured map with all relevant data for UI
     return {
       'budgetData': budgetData,
       'needsCategories': needsCategories,
@@ -116,9 +100,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     };
   }
 
-
-
-
   Future<double> _fetchTotalDeductions(DocumentReference userDocRef, String categoryType) async {
     final totalDeductionsDoc = await userDocRef.collection('TotalDeductions').doc(categoryType).get();
     return totalDeductionsDoc.exists ? totalDeductionsDoc['totalDeductions'] ?? 0.0 : 0.0;
@@ -127,22 +108,32 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
   void _checkCategoryLimits(List<dynamic> categories, String categoryType) {
     for (var category in categories) {
       final categoryBudget = category['amount'] ?? 0.0;
-      final remainingAmount = categoryBudget - (category['deductions'] ?? 0.0);
+      final categoryName = category['name'];
 
-      if (remainingAmount <= 0.2 * categoryBudget && !_alertedCategories.contains(category['name'])) {
-        _alertedCategories.add(category['name']);
-        _showLimitAlert(category['name'], categoryType);
+      if (categoryBudget > 0.0 && categoryBudget <= 0.1 * (category['originalAmount'] ?? 1.0)) {
+        if (!_alertedCategories.contains(categoryName)) {
+          _alertedCategories.add(categoryName);
+          _showLimitAlert(categoryName, categoryType, isRed: false, message: "You're at 10% remaining for $categoryType: $categoryName!");
+        }
+      } else if (categoryBudget < 0.0) {
+        if (!_alertedCategories.contains(categoryName)) {
+          _alertedCategories.add(categoryName);
+          _showLimitAlert(categoryName, categoryType, isRed: true, message: "$categoryType: $categoryName has gone over budget!");
+        }
       }
     }
   }
 
-  void _showLimitAlert(String categoryName, String categoryType) {
+  void _showLimitAlert(String categoryName, String categoryType, {required bool isRed, required String message}) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Budget Limit Alert'),
-          content: Text("You're almost at your limit for $categoryType: $categoryName!"),
+          title: Text(
+            'Budget Alert',
+            style: TextStyle(color: isRed ? Colors.red : Colors.black),
+          ),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -171,13 +162,29 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
         final amount = category['amount'] ?? 0.0;
         final originalAmount = category['originalAmount'] ?? 0.0;
 
+        // Determine category style based on the amount
+        TextStyle textStyle;
+        if (amount == 0.0) {
+          textStyle = TextStyle(
+            color: Colors.grey,
+            decoration: TextDecoration.lineThrough, // Strikethrough for completed
+          );
+        } else if (amount < 0.0) {
+          textStyle = TextStyle(color: Colors.red, fontWeight: FontWeight.bold); // Red for overspending
+        } else {
+          textStyle = TextStyle(color: Colors.black); // Default
+        }
+
         return ListTile(
           leading: Image.asset(
-            category['icon'], // Assuming icons are stored with their paths
+            category['icon'],
             width: 24.0,
             height: 24.0,
           ),
-          title: Text(category['name']),
+          title: Text(
+            category['name'],
+            style: textStyle, // Apply the style dynamically
+          ),
           subtitle: originalAmount > 0
               ? Text(
             'Allocated: ₱${originalAmount.toStringAsFixed(2)}',
@@ -190,15 +197,12 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           ),
           onTap: categoryType != 'Savings'
               ? () => _editCategoryAmount(category, budgetAmount, categoryType, categories)
-              : null, // Make Savings non-editable
+              : null,
         );
       },
     );
   }
 
-
-
-  // Dialog for editing category amounts
   Future<void> _editCategoryAmount(Map<String, dynamic> category, double budgetAmount, String categoryType, List<dynamic> categories) async {
     final TextEditingController allocatedController = TextEditingController(text: category['originalAmount'].toString());
     final TextEditingController amountController = TextEditingController(text: category['amount'].toString());
@@ -217,8 +221,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                 decoration: InputDecoration(labelText: 'Allocated Amount'),
                 onChanged: (value) {
                   final newAllocated = double.tryParse(value) ?? 0.0;
-
-                  // Calculate total originalAmount including the new value for this category
                   final totalOriginalAmount = _calculateTotalOriginalAmount(categories, category['categoryId'], newAllocated);
 
                   if (totalOriginalAmount > budgetAmount) {
@@ -237,7 +239,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                   final newAmount = double.tryParse(value) ?? 0.0;
                   final originalAmount = double.tryParse(allocatedController.text) ?? category['originalAmount'];
 
-                  // Ensure amount does not exceed allocated (originalAmount) value
                   if (newAmount > originalAmount) {
                     amountController.text = category['amount'].toString(); // Revert to previous value
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -258,7 +259,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                 final newAllocatedAmount = double.tryParse(allocatedController.text) ?? category['originalAmount'];
                 final newAmount = double.tryParse(amountController.text) ?? category['amount'];
 
-                // Ensure the amount still does not exceed the allocated amount before saving
                 if (newAmount > newAllocatedAmount) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Amount cannot exceed allocated amount of ₱${newAllocatedAmount.toStringAsFixed(2)}')),
@@ -279,7 +279,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                     'originalAmount': newAllocatedAmount,
                     'amount': newAmount,
                   });
-
                   setState(() {
                     category['originalAmount'] = newAllocatedAmount;
                     category['amount'] = newAmount;
@@ -289,7 +288,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                     SnackBar(content: Text('Category document not found.')),
                   );
                 }
-
                 Navigator.pop(context);
               },
               child: Text('Save'),
@@ -300,9 +298,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
     );
   }
 
-
-
-// Helper function to calculate the total originalAmount in the current tab
   double _calculateTotalOriginalAmount(List<dynamic> categories, String excludeCategoryId, double newAmount) {
     return categories.fold<double>(0.0, (sum, category) {
       if (category['categoryId'] == excludeCategoryId) {
@@ -311,7 +306,6 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
       return sum + (category['originalAmount'] ?? 0.0);
     });
   }
-
 
   Widget _buildTabContent(String tabName, List<dynamic> categories, double budgetAmount) {
     return Padding(

@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-
 import '../home/views/login_view.dart';
 import 'Notifications.dart';
 
@@ -121,18 +120,14 @@ class _ProfilePageState extends State<ProfilePage> {
         _imageFile = File(pickedFile.path);
         _profileImageUrl = null;
       });
-
       String fileName = pickedFile.name;
       try {
         TaskSnapshot snapshot = await _storage.ref('profile_images/$fileName').putFile(_imageFile!);
-
         String downloadUrl = await snapshot.ref.getDownloadURL();
-
         setState(() {
           _profileImageUrl = downloadUrl;
         });
-
-        await _updateUserProfile(); // Correctly calling the update method
+        await _updateUserProfile();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to upload image: $e')),
@@ -167,14 +162,14 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(
               child: Text('Cancel'),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: Text('Logout', style: TextStyle(color: Colors.red)),
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await _auth.signOut(); // Sign out the user
+                Navigator.of(context).pop();
+                await _auth.signOut();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => LoginView()),
@@ -189,9 +184,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = Colors.pink.shade300; // Pink
-    final Color secondaryColor = Colors.blue.shade300; // Blue
-
+    final Color primaryColor = Colors.pink.shade300;
+    final Color secondaryColor = Colors.blue.shade300;
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile Page'),

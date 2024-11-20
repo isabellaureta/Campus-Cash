@@ -11,7 +11,6 @@ class PayYourselfFirstRecords extends StatefulWidget {
 
 class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
   late Future<Map<String, dynamic>?> _record;
-  final Set<String> _alertedCategories = {};
 
   @override
   void initState() {
@@ -32,11 +31,9 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
       Map<String, dynamic> recordData = snapshot.data() as Map<String, dynamic>;
       recordData['id'] = snapshot.id;
 
-      // Get allocations and excess money
       Map<String, dynamic> allocations = recordData['allocations'] ?? {};
       double excessMoney = recordData['excessMoney'] ?? 0.0;
 
-      // Calculate total expenses as the sum of the differences between allocatedAmount and amount
       double totalExpenses = 0.0;
       allocations.forEach((categoryName, allocationDetails) {
         double allocatedAmount = (allocationDetails['allocatedAmount'] ?? 0.0).toDouble();
@@ -44,10 +41,8 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
         totalExpenses += (allocatedAmount - remainingAmount).abs();
       });
 
-      // Calculate remaining income
       double remainingIncome = excessMoney - totalExpenses;
 
-      // Update these values in Firestore
       await FirebaseFirestore.instance
           .collection('PayYourselfFirst')
           .doc(user.uid)
@@ -55,58 +50,22 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
         'yourselfExpenses': totalExpenses,
         'remainingYourself': remainingIncome,
       });
-
-      // Add calculated fields to recordData for local use
       recordData['yourselfExpenses'] = totalExpenses;
       recordData['remainingYourself'] = remainingIncome;
-
-      _checkCategoryLimits(recordData['allocations']);
       return recordData;
     }
     return null;
-  }
-
-
-  void _checkCategoryLimits(Map<String, dynamic> allocations) {
-    allocations.forEach((categoryName, allocationDetails) {
-      double allocatedAmount = (allocationDetails['allocatedAmount'] ?? 0.0).toDouble();
-      double remainingAmount = (allocationDetails['amount'] ?? allocatedAmount).toDouble();
-
-      if (remainingAmount <= 0.2 * allocatedAmount && !_alertedCategories.contains(categoryName)) {
-        _alertedCategories.add(categoryName);
-        WidgetsBinding.instance.addPostFrameCallback((_) => _showLimitAlert(categoryName));
-      }
-    });
-  }
-
-  void _showLimitAlert(String categoryName) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Budget Limit Alert'),
-          content: Text("You're almost at your limit for $categoryName!"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-          ],
-        ),
-      );
-    });
   }
 
   Future<void> _editAllocationAmount(
       String categoryName,
       Map<String, dynamic> details,
       String documentId,
-      double excessMoney, // Updated from totalIncome to excessMoney
+      double excessMoney,
       Map<String, dynamic> allocations,
       ) async {
     final allocatedController = TextEditingController(text: details['allocatedAmount'].toString());
     final amountController = TextEditingController(text: details['amount'].toString());
-
     double _calculateTotalAllocatedAmount(
         Map<String, dynamic> allocations,
         String excludeCategory,
@@ -143,8 +102,8 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                     newAllocated,
                   );
 
-                  if (totalAllocatedAmount > excessMoney) { // Validate against excessMoney
-                    allocatedController.text = details['allocatedAmount'].toString(); // Revert to original
+                  if (totalAllocatedAmount > excessMoney) {
+                    allocatedController.text = details['allocatedAmount'].toString();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Total allocated amount cannot exceed excess money of ₱${excessMoney.toStringAsFixed(2)}')),
                     );
@@ -178,7 +137,7 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                 final newAllocatedAmount = double.tryParse(allocatedController.text) ?? details['allocatedAmount'];
                 final newAmount = double.tryParse(amountController.text) ?? details['amount'];
 
-                if (newAllocatedAmount > excessMoney) { // Final validation against excessMoney
+                if (newAllocatedAmount > excessMoney) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Allocated amount cannot exceed excess money of ₱${excessMoney.toStringAsFixed(2)}')),
                   );
@@ -194,17 +153,14 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
 
                 final firestore = FirebaseFirestore.instance;
                 final allocationRef = firestore.collection('PayYourselfFirst').doc(documentId);
-
                 await allocationRef.update({
                   'allocations.$categoryName.allocatedAmount': newAllocatedAmount,
                   'allocations.$categoryName.amount': newAmount,
                 });
-
                 setState(() {
                   details['allocatedAmount'] = newAllocatedAmount;
                   details['amount'] = newAmount;
                 });
-
                 Navigator.pop(context);
               },
               child: Text('Save'),
@@ -215,18 +171,15 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
     );
   }
 
-
   Future<void> _deleteRecordData(String documentId) async {
     try {
       await FirebaseFirestore.instance
           .collection('PayYourselfFirst')
           .doc(documentId)
           .delete();
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Record deleted successfully')),
       );
-
       Navigator.push(context, MaterialPageRoute(builder: (context) => BudgetSelectionPage()));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -253,7 +206,6 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
         ],
       ),
     );
-
     if (shouldDelete == true) {
       await _deleteRecordData(documentId);
     }
@@ -280,7 +232,6 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
             var totalIncome = record['totalIncome'] ?? 0.0;
             var excessMoney = record['excessMoney'] ?? 0.0;;
 
-
             return Padding(
               padding: const EdgeInsets.all(8.0),
               child: ListView(
@@ -294,21 +245,20 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              Text('Remaining Income: ₱${(record['remainingYourself'] ?? 0.0).toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 16)),
                               IconButton(
                                 icon: Icon(Icons.settings, color: Colors.red),
                                 onPressed: () => _confirmDelete(record['id']),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
                           Text('Total Income: ₱${(totalIncome).toStringAsFixed(2)}'),
                           Text('Total Savings: ₱${(record['totalSavings'] ?? 0.0).toStringAsFixed(2)}'),
                           Text('Excess Money: ₱${(record['excessMoney'] ?? 0.0).toStringAsFixed(2)}'),
                           Text('Total Expenses: ₱${(record['yourselfExpenses'] ?? 0.0).toStringAsFixed(2)}'),
-                          Text('Remaining Income: ₱${(record['remainingYourself'] ?? 0.0).toStringAsFixed(2)}'),
-
                           Divider(),
                           Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ListView.builder(
@@ -318,28 +268,96 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                             itemBuilder: (context, index) {
                               var entry = allocations.entries.elementAt(index);
                               var details = entry.value as Map<String, dynamic>;
+                              double amount = details['amount'] ?? 0.0;
+                              double allocatedAmount = details['allocatedAmount'] ?? 0.0;
 
-                              return ListTile(
-                                leading: SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: Image.asset(details['icon'], fit: BoxFit.contain),
-                                ),
-                                title: Row(
-                                  children: [
-                                    Text(details['categoryName'] ?? entry.key),
-                                    SizedBox(width: 8),
-                                  ],
-                                ),
-                                subtitle: Text(
-                                  'Allocated: ₱${details['allocatedAmount'].toString()}',
-                                  style: TextStyle(fontSize: 11),
-                                ),
-                                trailing: Text(
-                                  '₱${details['amount'].toString()}',
-                                  style: TextStyle(fontSize: 15),
-                                ),
+                              // Determine the status and color based on the amount
+                              String status = '';
+                              Color amountColor = Colors.black;
+                              Color markColor = Colors.black;
+                              bool nearLimit = false;
+
+                              if (amount == 0) {
+                                status = 'Completed';
+                                amountColor = Colors.green; // Completed is marked in green
+                                markColor = Colors.green; // Mark is green
+                              } else if (amount < 0) {
+                                status = 'Below Zero';
+                                amountColor = Colors.red; // Below zero is marked in red
+                                markColor = Colors.red; // Mark is red
+                              } else if (amount <= (allocatedAmount * 0.2)) {
+                                // Check if amount is near 0 (within 20% of the allocated amount)
+                                status = 'Near the limit!';
+                                amountColor = Colors.orange.shade800; // Mark is orange
+                                markColor = Colors.orange.shade800; // Mark is orange
+                                nearLimit = true;
+                              }
+
+                              return GestureDetector(
                                 onTap: () => _editAllocationAmount(entry.key, details, record['id'], excessMoney, allocations),
+                                child: Card(
+                                  elevation: 5,
+                                  margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Status mark
+                                        Container(
+                                          width: 100,
+                                          height: 4,
+                                          color: markColor,
+                                        ),
+                                        SizedBox(height: 8),
+
+                                        // Category icon and name
+                                        Row(
+                                          children: [
+                                            SizedBox(
+                                              width: 40,
+                                              height: 40,
+                                              child: Image.asset(details['icon'], fit: BoxFit.contain),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                details['categoryName'] ?? entry.key,
+                                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 8),
+
+                                        // Amount and allocated text
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              '₱${amount.toString()}',
+                                              style: TextStyle(fontSize: 15, color: amountColor),
+                                            ),
+                                            Text(
+                                              'Allocated: ₱${allocatedAmount.toString()}',
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 8),
+
+                                        // Status text (Near the limit if applicable)
+                                        if (nearLimit)
+                                        Text(
+                                          status,
+                                          style: TextStyle(fontSize: 12, color: amountColor),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               );
                             },
                           ),

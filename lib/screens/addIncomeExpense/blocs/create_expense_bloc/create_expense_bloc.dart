@@ -2,7 +2,6 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 part 'create_expense_event.dart';
 part 'create_expense_state.dart';
 
@@ -27,7 +26,6 @@ class CreateExpenseBloc extends Bloc<CreateExpenseEvent, CreateExpenseState> {
           description: event.expense.description
         );
 
-        // Pass recurring options to the repository if the expense is marked as recurring
         await expenseRepository.createExpense(
           expense,
           isRecurring: event.isRecurring,

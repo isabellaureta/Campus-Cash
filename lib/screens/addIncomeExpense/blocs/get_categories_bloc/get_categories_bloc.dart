@@ -1,9 +1,7 @@
 import 'dart:developer';
-
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:expense_repository/repositories.dart';
-
 part 'get_categories_event.dart';
 part 'get_categories_state.dart';
 
@@ -12,7 +10,6 @@ class GetCategoriesBloc extends Bloc<GetCategoriesEvent, GetCategoriesState> {
 
   GetCategoriesBloc(this.expenseRepository) : super(GetCategoriesInitial()) {
     on<GetCategories>((event, emit) async {
-      // Remove the category from the state
       emit(GetCategoriesLoading());
       try {
         List<Category> categories = await expenseRepository.getCategory();
@@ -23,19 +20,15 @@ class GetCategoriesBloc extends Bloc<GetCategoriesEvent, GetCategoriesState> {
     });
 
     on<DeleteCategory>((event, emit) async {
-      // Remove the category from the state
       if (state is GetCategoriesSuccess) {
         try {
-          // Delete the category from the database
           await expenseRepository.deleteCategory(event.category);
-          // Update the state by removing the deleted category
           final newState = (state as GetCategoriesSuccess)
               .categories
               .where((cat) => cat != event.category)
               .toList();
-          emit(GetCategoriesSuccess(newState)); // Emitting the new state
+          emit(GetCategoriesSuccess(newState));
         } catch (e) {
-          // Handle error if deletion fails
           emit(GetCategoriesFailure());
         }
       }
@@ -44,19 +37,16 @@ class GetCategoriesBloc extends Bloc<GetCategoriesEvent, GetCategoriesState> {
 
   Stream<GetCategoriesState> mapEventToState(GetCategoriesEvent event) async* {
     if (event is DeleteCategory) {
-      // Remove the category from the state
       if (state is GetCategoriesSuccess) {
         final newState = (state as GetCategoriesSuccess)
             .categories
             .where((cat) => cat != event.category)
             .toList();
-        yield GetCategoriesSuccess(newState); // Passing the new state to the constructor
+        yield GetCategoriesSuccess(newState);
       }
     }
   }
 }
-
-
 
 class GetCategoriesBloc2 extends Bloc<GetCategoriesEvent2, GetCategoriesState2> {
   final IncomeRepository incomeRepository;

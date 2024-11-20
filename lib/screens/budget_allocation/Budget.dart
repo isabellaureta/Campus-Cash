@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'BudgetSet.dart';
 
 class Budget extends StatelessWidget {
@@ -81,7 +80,7 @@ class Budget extends StatelessWidget {
     double remainingPercentage = (remaining / budget) * 100;
 
     // Show warning if remaining is less than or equal to 20%
-    if (remainingPercentage <= 20) {
+    if (remainingPercentage <= 20 && remaining > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
           context: context,
@@ -89,6 +88,27 @@ class Budget extends StatelessWidget {
             return AlertDialog(
               title: Text('Warning'),
               content: Text('You are near your budget limit! Only ₱${remaining.toStringAsFixed(2)} left.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      });
+    }
+
+    // Show alert if remaining is negative
+    if (remaining < 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Budget Exceeded'),
+              content: Text('You have exceeded your budget by ₱${remaining.abs().toStringAsFixed(2)}.'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -128,30 +148,50 @@ class Budget extends StatelessWidget {
           },
         );
       },
-      child: Card(
-        elevation: 4,
-        margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Budget: ₱${budget.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        child: Card(child: Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 6,
+          margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade100, Colors.pink.shade100],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              Text(
-                'Remaining: ₱${remaining.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 16),
-              ),
-              Text(
-                'Period: ${data['period']}',
-                style: TextStyle(fontSize: 16),
-              ),
-            ],
+              borderRadius: BorderRadius.circular(15),
+            ),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Remaining: ₱${remaining.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: remaining < 0 ? Colors.red : Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Budget: ₱${budget.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Period: ${data['period']}',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+        )
     );
   }
 }

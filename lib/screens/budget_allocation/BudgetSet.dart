@@ -10,9 +10,9 @@ class SetBudgetPage extends StatefulWidget {
 class _SetBudgetPageState extends State<SetBudgetPage> {
   final TextEditingController _budgetController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  String _selectedPeriod = 'daily'; // Default selection
-  bool _autoRegenerateIncome = false; // Track if auto-regenerate income is selected
-  bool _carryOverExcessIncome = false; // Track if carry-over is selected
+  String _selectedPeriod = 'daily';
+  bool _autoRegenerateIncome = false;
+  bool _carryOverExcessIncome = false;
 
   Future<void> _saveBudget() async {
     User? user = _auth.currentUser;

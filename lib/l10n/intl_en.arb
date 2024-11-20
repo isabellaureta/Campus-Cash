@@ -17,7 +17,6 @@
     "login_view_new_account_part1": "Don't have an account? ",
     "login_view_new_account_part2": "Create one!",
 
-
     "register_view_join_now": "Join now!",
     "register_view_text": "Take control of your expenses like never before",
     "register_view_email_hintText": "Email adress",
@@ -26,7 +25,6 @@
     "register_view_register_button": "Register",
     "register_view_have_account_part1": "Already have an account? ",
     "register_view_have_account_part2": "Log in!",
-
     "verify_email_view_title": "Verify your email adress",
     "verify_email_view_main_info": "An activation link has been sent to the email address you provided. Please open it to verify your account.",
     "verify_email_view_if_confirmed": "If you've already confirmed your email address, please proceed to log in and access your account.",
@@ -41,13 +39,10 @@
     "forgot_password_view_send_button": "Send",
     "forgot_password_view_back_button": "Back",
     "forgot_password_view_dialog_context": "Something went wrong, and we couldn't send you the password reset link.",
-
     "user_details_view_get_to_know": "Let's get to know better!",
     "user_details_view_name_hintText": "Name",
     "user_details_view_save_button": "Save",
-
     "auth_state_loading_text": "Please wait a moment",
-
     "dialog_delete": "Delete",
     "dialog_are_you_sure_transaction": "Are you sure you want to delete this transaction?",
     "dialog_cancel": "Cancel",
@@ -57,11 +52,14 @@
     "dialog_logout": "Log out",
     "dialog_password_reset": "Password reset",
     "dialog_link_sent": "We have sent a password reset link to the email address you provided.",
-
     "bottom_navbar_home": "Home",
     "bottom_navbar_history": "History",
     "bottom_navbar_reports": "Reports",
+    "generic_pln": "zł",
 
-    "generic_pln": "zł"
+    "dialog_wrong_password": "The password you entered is incorrect.",
+    "dialog_user_not_found": "User not found.",
+    "dialog_invalid_email": "The email address you entered is invalid.",
+    "dialog_generic_error": "Something went wrong, please try again."
 
 }

@@ -8,7 +8,6 @@ import 'package:uuid/uuid.dart';
 
 Future getCategoryCreation2(BuildContext context) {
   List<String> myCategoriesIcons = ['entertainment', 'food', 'home', 'pet', 'shopping', 'tech', 'travel'];
-
   return showDialog(
       context: context,
       builder: (ctx) {
@@ -53,9 +52,7 @@ Future getCategoryCreation2(BuildContext context) {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
                         ),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         TextFormField(
                           controller: categoryIconController,
                           onTap: () {
@@ -106,9 +103,7 @@ Future getCategoryCreation2(BuildContext context) {
                           ),
                         )
                             : Container(),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         TextFormField(
                           controller: categoryColorController,
                           onTap: () {
@@ -156,9 +151,7 @@ Future getCategoryCreation2(BuildContext context) {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
                         ),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         SizedBox(
                           width: double.infinity,
                           height: kToolbarHeight,
@@ -168,21 +161,16 @@ Future getCategoryCreation2(BuildContext context) {
                           )
                               : TextButton(
                               onPressed: () {
-                                // Create Category Object and POP
                                 setState(() {
                                   category2.categoryId2 = const Uuid().v1();
                                   category2.name = categoryNameController.text;
                                   category2.icon = iconSelected;
                                   category2.color = categoryColor.value;
                                 });
-
                                 context.read<CreateCategoryBloc2>().add(CreateCategory2(category2));
                               },
                               style: TextButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                              child: const Text(
-                                'Save',
-                                style: TextStyle(fontSize: 22, color: Colors.white),
-                              )
+                              child: const Text('Save', style: TextStyle(fontSize: 22, color: Colors.white),)
                           ),
                         )
                       ],

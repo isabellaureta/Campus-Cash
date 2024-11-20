@@ -96,9 +96,7 @@ Future getCategoryCreation(BuildContext context) {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
                         ),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         TextFormField(
                           controller: categoryIconController,
                           onTap: () {
@@ -153,9 +151,7 @@ Future getCategoryCreation(BuildContext context) {
                           ),
                         )
                             : Container(),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         TextFormField(
                           controller: categoryColorController,
                           onTap: () {
@@ -203,9 +199,7 @@ Future getCategoryCreation(BuildContext context) {
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           ),
                         ),
-                        const SizedBox(
-                          height: 16,
-                        ),
+                        const SizedBox(height: 16,),
                         SizedBox(
                           width: double.infinity,
                           height: kToolbarHeight,

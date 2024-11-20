@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -75,17 +74,15 @@ class _AddGoalPageState extends State<AddGoalPage> {
     if (picked != null) {
       setState(() {
         _endDate = picked;
-        _calculateRequiredSavings(); // Call the function to calculate savings
+        _calculateRequiredSavings();
       });
     }
   }
 
   void _calculateRequiredSavings() {
     if (_endDate == null || _goalAmount <= 0) return;
-
     final duration = _endDate!.difference(DateTime.now());
     int periods;
-
     switch (_selectedFrequency) {
       case 'Daily':
         periods = duration.inDays;
@@ -113,29 +110,28 @@ class _AddGoalPageState extends State<AddGoalPage> {
       await FirebaseFirestore.instance
           .collection('goals')
           .doc(user.uid)
-          .collection('userGoals') // Separate collection for each user's goals
+          .collection('userGoals')
           .add({
         'goalName': _goalNameController.text,
-        'color': _selectedColor.value.toRadixString(16), // Store color as hex
+        'color': _selectedColor.value.toRadixString(16),
         'goalAmount': _goalAmount,
         'savedAmount': _savedAmount,
-        'frequency': _selectedFrequency, // Save selected frequency
+        'frequency': _selectedFrequency,
         'endDate': _endDate,
-        'requiredSavings': _requiredSavings, // Save calculated required savings
+        'requiredSavings': _requiredSavings,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Goal saved successfully')),
       );
 
-      Navigator.pop(context); // Exit the page after saving
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save goal: $e')),
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -231,7 +227,7 @@ class _AddGoalPageState extends State<AddGoalPage> {
                   ),
                 ),
               ),
-              if (_requiredSavings > 0) // Only show if there’s a required savings amount
+              if (_requiredSavings > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Text(

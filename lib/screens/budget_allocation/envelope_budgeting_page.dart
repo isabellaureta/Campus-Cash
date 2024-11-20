@@ -17,7 +17,6 @@ class Envelope {
   });
 }
 
-// Define the allowed category names
 const List<String> allowedCategoryNames = [
   'House',
   'Utilities',
@@ -32,7 +31,6 @@ const List<String> allowedCategoryNames = [
   'Savings',
 ];
 
-// Filter predefinedCategories to include only the allowed categories
 final List<Category> filteredCategories = predefinedCategories.where((category) {
   return allowedCategoryNames.contains(category.name);
 }).toList();
@@ -80,7 +78,6 @@ class _IncomeInputPageState extends State<IncomeInputPage> {
 
 class AllocationPage extends StatefulWidget {
   final double income;
-
   AllocationPage({required this.income});
 
   @override
@@ -95,7 +92,6 @@ class _AllocationPageState extends State<AllocationPage> {
   String? warningMessage;
 
   final Map<String, TextEditingController> _controllers = {};
-
   final Map<String, double> allocationPercentages = {
     'House': 0.25,
     'Utilities': 0.10,
@@ -131,17 +127,14 @@ class _AllocationPageState extends State<AllocationPage> {
   void _allocate(String category, String amount) {
     setState(() {
       allocations[category] = amount;
-
       double totalAllocated = allocations.values.fold(0.0, (sum, amount) {
         return sum + (double.tryParse(amount) ?? 0.0);
       });
-
       remainingIncome = widget.income - totalAllocated;
-
       if (remainingIncome < 0) {
         warningMessage = 'Exceeding remaining income';
       } else {
-        warningMessage = null; // Clear the warning message if within limits
+        warningMessage = null;
       }
     });
   }
@@ -172,8 +165,6 @@ class _AllocationPageState extends State<AllocationPage> {
                                 selectedCategories.add(category);
                               } else {
                                 selectedCategories.remove(category);
-
-                                // Clear the allocation and controller for unselected categories
                                 _controllers[category.name]?.clear();
                                 allocations.remove(category.name);
                               }
@@ -185,7 +176,6 @@ class _AllocationPageState extends State<AllocationPage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      // Update the main state when Done is pressed
                       setState(() {});
                       Navigator.pop(context);
                     },
@@ -204,21 +194,16 @@ class _AllocationPageState extends State<AllocationPage> {
     setState(() {
       isSaving = true;
     });
-
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('No user logged in');
 
       String userId = user.uid;
-
-      // Reference to the user document in envelopeAllocations
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(userId);
-
-      // Save income, frequency, initial envelopeExpenses (0), and initial remainingEnvelope (income)
       await userDocRef.set({
         'income': widget.income,
-        'envelopeExpenses': 0.0, // Start with zero since no expenses have been created yet
-        'remainingEnvelope': widget.income, // Start with the full income amount
+        'envelopeExpenses': 0.0,
+        'remainingEnvelope': widget.income,
       }, SetOptions(merge: true));
 
       Map<String, double> validAllocations = {};
@@ -229,7 +214,6 @@ class _AllocationPageState extends State<AllocationPage> {
           double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
           double remainingBudget = allocatedAmount;
 
-          // Save each allocation under a subcollection
           await userDocRef.collection('envelopes').doc(category.categoryId).set({
             'categoryName': category.name,
             'categoryId': category.categoryId,
@@ -245,7 +229,6 @@ class _AllocationPageState extends State<AllocationPage> {
         SnackBar(content: Text('Allocations saved successfully!')),
       );
 
-      // Navigate to EnvelopeBudgetingPage with the saved allocations
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -265,7 +248,6 @@ class _AllocationPageState extends State<AllocationPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -284,7 +266,7 @@ class _AllocationPageState extends State<AllocationPage> {
           children: [
             Text('Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: remainingIncome < 0 ? Colors.red : Colors.black, // Change color if exceeding
+                  color: remainingIncome < 0 ? Colors.red : Colors.black,
                 )
             ),
             if (warningMessage != null)

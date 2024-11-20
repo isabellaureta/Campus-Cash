@@ -41,11 +41,8 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
 
   void calculateSavingsAndExcessMoney() {
     try {
-      // Parse and validate inputs
       final income = double.parse(incomeController.text);
       final percent = double.parse(percentController.text);
-
-      // Calculate savings based on percent of income
       final savings = income * (percent / 100);
 
       setState(() {
@@ -55,7 +52,6 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
         showResult = true;
       });
     } catch (e) {
-      // Show an error if parsing fails
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter valid numeric values for income and percent')),
       );
@@ -163,18 +159,16 @@ class ShowAllocationPage extends StatefulWidget {
 }
 
 class _ShowAllocationPageState extends State<ShowAllocationPage> {
-  final Map<String, String> allocations = {}; // Store allocations per category
-  double remainingIncome = 0.0;  // Remaining income after allocations
-  bool isSaving = false;         // Saving state for Firestore
-  String? warningMessage;        // Warning when income is exceeded
-
-  final Map<String, TextEditingController> _controllers = {};  // Text controllers for inputs
+  final Map<String, String> allocations = {};
+  double remainingIncome = 0.0;
+  bool isSaving = false;
+  String? warningMessage;
+  final Map<String, TextEditingController> _controllers = {};
 
   @override
   void initState() {
     super.initState();
-    remainingIncome = widget.excessMoney;  // Initialize remaining income with the excess money
-
+    remainingIncome = widget.excessMoney;
     for (var category in widget.selectedCategories) {
       _controllers[category.name] = widget.controllers[category.name] ?? TextEditingController();
     }
@@ -190,21 +184,16 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
 
   void _allocate(String category, String amount) {
     setState(() {
-      allocations[category] = amount;  // Store allocation in the map
+      allocations[category] = amount;
 
-      // Calculate the total allocated amount
       double totalAllocated = allocations.values.fold(0.0, (sum, amount) {
         return sum + (double.tryParse(amount) ?? 0.0);
       });
-
-      // Update the remaining income
       remainingIncome = widget.excessMoney - totalAllocated;
-
-      // Check if remaining income is negative and set the warning message
       if (remainingIncome < 0) {
         warningMessage = 'Exceeding remaining income';
       } else {
-        warningMessage = null;  // Clear the warning message if within limits
+        warningMessage = null;
       }
     });
   }
@@ -213,16 +202,11 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('No user logged in');
-
       String userId = user.uid;
-
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(userId);
-
       Map<String, dynamic> allocationsData = {};
-
       for (var entry in allocations.entries) {
         double allocatedAmount = double.tryParse(entry.value) ?? 0.0;
-
         final category = predefinedCategories.firstWhere(
               (cat) => cat.name == entry.key,
           orElse: () => throw Exception('Category not found: ${entry.key}'),
@@ -231,25 +215,22 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         allocationsData[category.categoryId] = {
           'categoryName': category.name,
           'categoryId': category.categoryId,
-          'amount': allocatedAmount,                    // Actual allocated amount
-          'allocatedAmount': allocatedAmount,            // Original allocated amount
+          'amount': allocatedAmount,
+          'allocatedAmount': allocatedAmount,
           'icon': category.icon ?? 'assets/${category.name.toLowerCase()}.png',
         };
       }
-
       await userDocRef.set({
         'totalIncome': widget.totalIncome,
         'totalSavings': widget.totalSavings,
         'excessMoney': widget.excessMoney,
         'yourselfExpenses': 0.0,
         'remainingYourself': widget.excessMoney,
-        'allocations': allocationsData,                 // Include original allocation
+        'allocations': allocationsData,
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Allocations saved successfully!')),
       );
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),
@@ -260,7 +241,6 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
       );
     }
   }
-
 
   void _showCategorySelection(BuildContext parentContext) {
     showModalBottomSheet(
@@ -340,7 +320,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
             Text(
               'Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
               style: TextStyle(
-                color: remainingIncome < 0 ? Colors.red : Colors.black,  // Red if exceeding
+                color: remainingIncome < 0 ? Colors.red : Colors.black,
               ),
             ),
             if (warningMessage != null)

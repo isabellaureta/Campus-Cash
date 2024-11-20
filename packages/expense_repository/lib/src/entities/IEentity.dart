@@ -26,7 +26,7 @@ class ExpenseEntity {
       'date': Timestamp.fromDate(date),
       'amount': amount,
       'userId': userId,
-      'description': description,  // Include description here
+      'description': description,
     };
   }
 
@@ -37,7 +37,7 @@ class ExpenseEntity {
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'] as int,
       userId: doc['userId'] as String,
-      description: doc['description'] as String?,  // Read description from document
+      description: doc['description'] as String?,
     );
   }
 }
@@ -66,7 +66,7 @@ class IncomeEntity {
       'date': date,
       'amount': amount,
       'userId': userId,
-      'description': description,  // Include description here
+      'description': description,
     };
   }
 
@@ -77,7 +77,7 @@ class IncomeEntity {
       date: (doc['date'] as Timestamp).toDate(),
       amount: doc['amount'],
       userId: doc['userId'],
-      description: doc['description'] as String?,  // Read description from document
+      description: doc['description'] as String?,
     );
   }
 }

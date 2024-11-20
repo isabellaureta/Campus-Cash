@@ -1,18 +1,16 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:campuscash/auth/auth_exceptions.dart';
 import 'package:campuscash/auth/bloc/auth_bloc.dart';
 import 'package:campuscash/auth/bloc/auth_event.dart';
 import 'package:campuscash/auth/bloc/auth_state.dart';
 import 'package:campuscash/constants/colors.dart';
 import 'package:campuscash/utilities/dialogs/error_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
-
   @override
   State<LoginView> createState() => _LoginViewState();
 }
@@ -59,7 +57,6 @@ class _LoginViewState extends State<LoginView> {
               'Something went wrong, please try again',
             );
           }
-
         }
       },
       child: GestureDetector(
@@ -68,8 +65,7 @@ class _LoginViewState extends State<LoginView> {
           body: SingleChildScrollView(
             child: Center(
               child: Container(
-                margin: const EdgeInsets.symmetric(
-                    horizontal: 30.0, vertical: 35.0),
+                margin: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 35.0),
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
                 height: MediaQuery.of(context).size.height * 0.75,
                 child: Column(
@@ -83,9 +79,7 @@ class _LoginViewState extends State<LoginView> {
                         width: 100.0,
                       ),
                     ),
-                    const SizedBox(
-                      height: 10,
-                    ),
+                    const SizedBox(height: 10,),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -104,15 +98,12 @@ class _LoginViewState extends State<LoginView> {
                             fontSize: 14, fontWeight: FontWeight.w400),
                       ),
                     ),
-                    const SizedBox(
-                      height: 50.0,
-                    ),
+                    const SizedBox(height: 50.0,),
                     TextField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       enableSuggestions: false,
                       autocorrect: false,
-                      //autofocus: true,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email),
                         hintText: AppLocalizations.of(context)!
@@ -184,39 +175,131 @@ class _LoginViewState extends State<LoginView> {
                             .login_view_forgot_password),
                       ),
                     ),
-                    const SizedBox(
-                      height: 25.0,
-                    ),
-                    SizedBox(
-                      width: 225.0,
-                      child: FilledButton(
-                        onPressed: () async {
-                          final email = _email.text;
-                          final password = _password.text;
-                          context.read<AuthBloc>().add(
-                            AuthEventLogIn(
-                              email,
-                              password,
+                    const SizedBox(height: 25.0,),
+                SizedBox(
+                width: 225.0,
+                child: FilledButton(
+                  onPressed: () async {
+                    final email = _email.text.trim();
+                    final password = _password.text.trim();
+
+                    if (email.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
+                      // Show popup for invalid email
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Invalid Email'),
+                          content: const Text('Please enter a valid email address.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('OK'),
                             ),
-                          );
-                        },
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15.0),
-                          ),
+                          ],
                         ),
-                        child: Text(
-                          AppLocalizations.of(context)!.login_view_login_button,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      );
+                      return;
+                    }
+
+                    if (password.isEmpty) {
+                      // Show popup for empty password
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Password Required'),
+                          content: const Text('Please enter your password.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('OK'),
+                            ),
+                          ],
                         ),
-                      ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      // Check if the email exists and handle wrong password
+                      await FirebaseAuth.instance.signInWithEmailAndPassword(
+                        email: email,
+                        password: password,
+                      );
+
+                      // Dispatch login event if no exception occurs
+                      context.read<AuthBloc>().add(
+                        AuthEventLogIn(
+                          email,
+                          password,
+                        ),
+                      );
+                    } on FirebaseAuthException catch (e) {
+                      if (e.code == 'wrong-password') {
+                        // Popup for wrong password
+                        await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Wrong Password'),
+                            content: const Text(
+                                'The password you entered is incorrect. Please try again.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else if (e.code == 'user-not-found') {
+                        // Popup for user not found
+                        await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('User Not Found'),
+                            content: const Text(
+                                'No account found with this email. Please check your email or create a new account.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        // Popup for generic error
+                        await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Error'),
+                            content: const Text(
+                                'Invalid email or password'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
                     ),
-                    const SizedBox(
-                      height: 25.0,
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context)!.login_view_login_button,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 25.0,),
                     TextButton(
                       onPressed: () {
                         context.read<AuthBloc>().add(

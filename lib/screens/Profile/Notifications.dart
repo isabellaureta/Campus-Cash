@@ -34,7 +34,6 @@ class NotificationHelper {
       showWhen: false,
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-
     await flutterLocalNotificationsPlugin.zonedSchedule(
       0,
       'Daily Expense Reminder',

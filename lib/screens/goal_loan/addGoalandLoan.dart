@@ -7,7 +7,6 @@ import 'addGoals.dart';
 
 class CustomTabBarsPage extends StatefulWidget {
   const CustomTabBarsPage({super.key});
-
   @override
   State<CustomTabBarsPage> createState() => _CustomTabBarsPageState();
 }
@@ -45,18 +44,15 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
   Widget _buildGoalCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
-    // Parse the goal's saved and target amounts, color, and frequency
     double savedAmount = data['savedAmount']?.toDouble() ?? 0.0;
     double goalAmount = data['goalAmount']?.toDouble() ?? 0.0;
     double requiredSavings = data['requiredSavings']?.toDouble() ?? 0.0;
     String frequency = data['frequency'] ?? 'Daily';
     double progress = goalAmount > 0 ? savedAmount / goalAmount : 0.0;
 
-    // Safely parse startDate and endDate with null checks
     DateTime? startDate = (data['startDate'] as Timestamp?)?.toDate();
     DateTime? endDate = (data['endDate'] as Timestamp?)?.toDate();
 
-    // Parse the color from Firestore and convert it to a Color object
     Color goalColor = Color(int.parse(data['color'], radix: 16)).withOpacity(1.0);
 
     return GestureDetector(
@@ -170,9 +166,7 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
                 if (!snapshot.hasData) {
                   return Center(child: CircularProgressIndicator());
                 }
-
                 final goals = snapshot.data!.docs;
-
                 return ListView.builder(
                   itemCount: goals.length,
                   itemBuilder: (context, index) {

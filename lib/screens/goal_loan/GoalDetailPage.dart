@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class GoalDetailPage extends StatefulWidget {
   final DocumentSnapshot goal;
-
   GoalDetailPage({required this.goal});
 
   @override
@@ -13,12 +12,12 @@ class GoalDetailPage extends StatefulWidget {
 }
 
 class _GoalDetailPageState extends State<GoalDetailPage> {
-  String selectedFrequency = 'Daily'; // Default frequency
+  String selectedFrequency = 'Daily';
   List<String> _frequencies = ['Daily', 'Weekly', 'Monthly'];
   late Map<String, dynamic> goalData;
   late double progress;
   double requiredSavings = 0.0;
-  DateTime? selectedEndDate; // Track selected end date for editing
+  DateTime? selectedEndDate;
   final TextEditingController _goalNameController = TextEditingController();
   final TextEditingController _goalAmountController = TextEditingController();
 
@@ -33,14 +32,11 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
     _goalNameController.text = goalData['goalName'] ?? '';
     _goalAmountController.text = goalData['goalAmount']?.toString() ?? '0.0';
     selectedEndDate = (goalData['endDate'] as Timestamp?)?.toDate();
-
     _calculateRequiredSavings();
   }
 
   void _calculateRequiredSavings() {
-    // Check if the end date is not set or if the goal amount is invalid
     if (selectedEndDate == null || (double.tryParse(_goalAmountController.text) ?? 0.0) <= 0) return;
-
     final duration = selectedEndDate!.difference(DateTime.now());
     double remainingAmount = (double.tryParse(_goalAmountController.text) ?? 0.0) - goalData['savedAmount'];
     int periods;
@@ -63,7 +59,6 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       requiredSavings = periods > 0 ? remainingAmount / periods : 0;
     });
   }
-
 
   void _showEditGoalDialog() {
     showDialog(
@@ -99,7 +94,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
                     onChanged: (value) {
                       setState(() {
                         selectedFrequency = value!;
-                        _calculateRequiredSavings(); // Recalculate savings when frequency changes
+                        _calculateRequiredSavings();
                       });
                     },
                     decoration: InputDecoration(labelText: 'Frequency'),
@@ -115,7 +110,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
                       if (pickedDate != null) {
                         setState(() {
                           selectedEndDate = pickedDate;
-                          _calculateRequiredSavings(); // Recalculate savings when end date changes
+                          _calculateRequiredSavings();
                         });
                       }
                     },
@@ -132,7 +127,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
                     ),
                   ),
                   SizedBox(height: 10),
-                  if (requiredSavings > 0) // Only show if there's a required savings amount
+                  if (requiredSavings > 0)
                     Text(
                       'Required Savings: ₱${requiredSavings.toStringAsFixed(2)} ${selectedFrequency.toLowerCase()}',
                       style: TextStyle(
@@ -159,7 +154,6 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
                   },
                   child: Text('Update'),
                 )
-
               ],
             );
           },
@@ -190,18 +184,15 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       goalData['goalAmount'] = goalAmount;
       goalData['frequency'] = frequency;
       goalData['endDate'] = endDate != null ? Timestamp.fromDate(endDate) : null;
-
       progress = goalAmount > 0 ? goalData['savedAmount'] / goalAmount : 0;
       _calculateRequiredSavings();
     });
   }
 
-
   Future<void> _addGoalSavings(double amount, DateTime date) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Update saved amount in Firestore
     await FirebaseFirestore.instance
         .collection('goals')
         .doc(user.uid)
@@ -211,7 +202,6 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       'savedAmount': FieldValue.increment(amount),
     });
 
-    // Add new entry to history
     await FirebaseFirestore.instance
         .collection('goals')
         .doc(user.uid)
@@ -223,14 +213,12 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       'date': date,
     });
 
-    // Update local state to reflect new saved amount
     setState(() {
       goalData['savedAmount'] += amount;
       progress = goalData['goalAmount'] > 0
           ? goalData['savedAmount'] / goalData['goalAmount']
           : 0;
 
-      // Recalculate required savings after adding new savings
       _calculateRequiredSavings();
     });
   }
@@ -238,7 +226,6 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
   void _showAddSavingsDialog() {
     double amount = 0.0;
     DateTime selectedDate = DateTime.now();
-
     showDialog(
       context: context,
       builder: (context) {
@@ -313,9 +300,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-
         final historyDocs = snapshot.data!.docs;
-
         return ListView.builder(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
@@ -326,7 +311,6 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
 
             return GestureDetector(
               onLongPress: () {
-                // Prompt user for deletion
                 showDialog(
                   context: context,
                   builder: (BuildContext context) {
@@ -364,39 +348,30 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
   Future<void> _deleteHistoryEntry(String historyId, double amount) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-
-    // Reference to the specific goal document
     DocumentReference goalDoc = FirebaseFirestore.instance
         .collection('goals')
         .doc(user.uid)
         .collection('userGoals')
         .doc(widget.goal.id);
 
-    // Update Firestore: Delete history entry and decrement saved amount
     await FirebaseFirestore.instance.runTransaction((transaction) async {
       DocumentSnapshot goalSnapshot = await transaction.get(goalDoc);
-
       if (goalSnapshot.exists) {
         double currentSavedAmount = goalSnapshot['savedAmount'] ?? 0.0;
         double updatedSavedAmount = currentSavedAmount - amount;
-
-        // Update the goal's savedAmount after deleting the history entry
         transaction.update(goalDoc, {
           'savedAmount': updatedSavedAmount,
         });
-
-        // Remove the history entry
         transaction.delete(goalDoc.collection('history').doc(historyId));
       }
     });
 
-    // Update the local state
     setState(() {
       goalData['savedAmount'] -= amount;
       progress = goalData['goalAmount'] > 0
           ? goalData['savedAmount'] / goalData['goalAmount']
           : 0;
-      _calculateRequiredSavings(); // Recalculate required savings
+      _calculateRequiredSavings();
     });
   }
 
@@ -531,5 +506,4 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       ),
     );
   }
-
 }

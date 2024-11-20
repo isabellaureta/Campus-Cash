@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class AuthUser {
-  final String uid; // Renamed from 'id'
+  final String uid;
   final String email;
   final bool isEmailVerified;
   const AuthUser({

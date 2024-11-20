@@ -10,20 +10,17 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ForgotPasswordView extends StatefulWidget {
   const ForgotPasswordView({super.key});
-
   @override
   State<ForgotPasswordView> createState() => _ForgotPasswordViewState();
 }
 
 class _ForgotPasswordViewState extends State<ForgotPasswordView> {
   late final TextEditingController _textController;
-
   @override
   void initState() {
     _textController = TextEditingController();
     super.initState();
   }
-
   @override
   void dispose() {
     _textController.dispose();
@@ -40,10 +37,8 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
             await showPasswordResetSentDialog(context);
           }
           if (state.exception != null) {
-            // ignore: use_build_context_synchronously
             await showErrorDialog(
               context,
-              // ignore: use_build_context_synchronously
               AppLocalizations.of(context)!.forgot_password_view_dialog_context,
             );
           }
@@ -146,7 +141,6 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                           context
                               .read<AuthBloc>()
                               .add(AuthEventForgotPassword(email: email));
-                          //context.read<AuthBloc>().add(const AuthEventLogOut());
                         },
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(

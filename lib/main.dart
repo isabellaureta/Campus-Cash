@@ -23,9 +23,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -35,11 +32,10 @@ void main() async {
 
   await FirebaseAppCheck.instance.activate();
 
-  // Set Firestore settings with caching enabled
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    host: "firestore.googleapis.com", // Default host
+    host: "firestore.googleapis.com",
     sslEnabled: true,
   );
 
@@ -50,7 +46,6 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return const MyAppView();
@@ -90,7 +85,6 @@ class HomePage extends StatelessWidget {
                 return Text('Error: ${snapshot.error}');
               } else {
                 final userDetailsDoc = snapshot.data;
-
                 if (userDetailsDoc != null) {
                   final firstTime = userDetailsDoc['firstTime'] ?? true;
                   log('firstTime: $firstTime');
@@ -99,7 +93,6 @@ class HomePage extends StatelessWidget {
                     return const HomeScreen();
                   }
                 }
-
                 return const HomeScreen();
               }
             },
@@ -128,7 +121,6 @@ class HomePage extends StatelessWidget {
   Future<DocumentSnapshot<Map<String, dynamic>>?> _getUserDetails(String userId) async {
     final DocumentSnapshot<Map<String, dynamic>> doc =
     await FirebaseFirestore.instance.collection('users').doc(userId).get();
-
     if (doc.exists) {
       return doc;
     } else {

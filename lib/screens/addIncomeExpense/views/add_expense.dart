@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,7 +9,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/create_expense_bloc/create_expense_bloc.dart';
-import 'category_creation.dart';
 
 class AddExpense extends StatefulWidget {
   const AddExpense({super.key});
@@ -26,7 +24,6 @@ class _AddExpenseState extends State<AddExpense> {
   TextEditingController descriptionController = TextEditingController();
   late Expense expense;
   bool isLoading = false;
-
   bool isRecurring = false;
   String selectedFrequency = 'Weekly';
   TextEditingController startDateController = TextEditingController();
@@ -43,29 +40,22 @@ class _AddExpenseState extends State<AddExpense> {
 
   Future<bool> checkIfBudgetExists(String userId) async {
     final firestore = FirebaseFirestore.instance;
-
-    // Define the document references for each required budgeting technique
     final budgetDoc = firestore.collection('budgets').doc(userId);
     final budgetingDoc503020 = firestore.collection('503020').doc(userId);
     final envelopeAllocationsDoc = firestore.collection('envelopeAllocations').doc(userId);
     final payYourselfFirstDoc = firestore.collection('PayYourselfFirst').doc(userId);
     final priorityBasedDoc = firestore.collection('PriorityBased').doc(userId);
-
-    // Check each document for existence
     final budgetSnapshot = await budgetDoc.get();
     final budgeting503020Snapshot = await budgetingDoc503020.get();
     final envelopeAllocationsSnapshot = await envelopeAllocationsDoc.get();
     final payYourselfFirstSnapshot = await payYourselfFirstDoc.get();
     final priorityBasedSnapshot = await priorityBasedDoc.get();
-
-    // Return true if at least one budgeting technique exists, false if all are missing
     return budgetSnapshot.exists ||
         budgeting503020Snapshot.exists ||
         envelopeAllocationsSnapshot.exists ||
         payYourselfFirstSnapshot.exists ||
         priorityBasedSnapshot.exists;
   }
-
 
   void showAlertDialog(BuildContext context, String message) {
     showDialog(
@@ -86,7 +76,6 @@ class _AddExpenseState extends State<AddExpense> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -115,12 +104,8 @@ class _AddExpenseState extends State<AddExpense> {
                 children: [
                   const Text(
                     "Add Expense",
-                    style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),),
+                  const SizedBox(height: 16,),
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.7,
                     child: TextFormField(
@@ -128,16 +113,14 @@ class _AddExpenseState extends State<AddExpense> {
                       textAlignVertical: TextAlignVertical.center,
                       keyboardType: TextInputType.number,
                       inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
+                        FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         prefixIcon: const Icon(
                           FontAwesomeIcons.pesoSign,
                           size: 16,
-                          color: Colors.grey,
-                        ),
+                          color: Colors.grey,),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
@@ -145,10 +128,7 @@ class _AddExpenseState extends State<AddExpense> {
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 32,
-                  ),
-
+                  const SizedBox(height: 32,),
                   TextFormField(
                     controller: categoryController,
                     textAlignVertical: TextAlignVertical.center,
@@ -169,18 +149,6 @@ class _AddExpenseState extends State<AddExpense> {
                         '${expense.category.icon}',
                         scale: 2,
                       ),
-                      suffixIcon: IconButton(
-                          onPressed: () async {
-                            var newCategory = await getCategoryCreation(context);
-                            setState(() {
-                              predefinedCategories.insert(0, newCategory);
-                            });
-                          },
-                          icon: const Icon(
-                            FontAwesomeIcons.plus,
-                            size: 16,
-                            color: Colors.grey,
-                          )),
                       hintText: 'Category',
                       border: const OutlineInputBorder(
                           borderRadius: BorderRadius.vertical(
@@ -248,9 +216,7 @@ class _AddExpenseState extends State<AddExpense> {
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                  const SizedBox(height: 16,),
                   TextFormField(
                     controller: dateController,
                     textAlignVertical: TextAlignVertical.center,
@@ -262,7 +228,6 @@ class _AddExpenseState extends State<AddExpense> {
                           firstDate: DateTime(1900),
                           lastDate: DateTime.now()
                               .add(const Duration(days: 365)));
-
                       if (newDate != null) {
                         setState(() {
                           dateController.text =
@@ -285,9 +250,7 @@ class _AddExpenseState extends State<AddExpense> {
                           borderSide: BorderSide.none),
                     ),
                   ),
-                  const SizedBox(
-                    height: 16,
-                  ),
+                  const SizedBox(height: 16,),
                   TextFormField(
                     controller: descriptionController,
                     textAlignVertical: TextAlignVertical.center,
@@ -307,7 +270,6 @@ class _AddExpenseState extends State<AddExpense> {
                       ),
                     ),
                   ),
-
                   CheckboxListTile(
                     title: Text("Set as recurring"),
                     value: isRecurring,
@@ -317,7 +279,6 @@ class _AddExpenseState extends State<AddExpense> {
                       });
                     },
                   ),
-
                   if (isRecurring) ...[
                     DropdownButtonFormField<String>(
                       value: selectedFrequency,
@@ -346,8 +307,6 @@ class _AddExpenseState extends State<AddExpense> {
                         fillColor: Colors.white,
                       ),
                     ),
-
-                    // Start Date Picker
                     TextFormField(
                       controller: startDateController,
                       readOnly: true,
@@ -369,8 +328,6 @@ class _AddExpenseState extends State<AddExpense> {
                         fillColor: Colors.white,
                       ),
                     ),
-
-                    // End Date Picker
                     TextFormField(
                       controller: endDateController,
                       readOnly: true,
@@ -403,7 +360,6 @@ class _AddExpenseState extends State<AddExpense> {
                       },
                     ),
                   ],
-
                   SizedBox(
                     width: double.infinity,
                     height: kToolbarHeight,
@@ -417,24 +373,11 @@ class _AddExpenseState extends State<AddExpense> {
                             log('No authenticated user found.');
                             return;
                           }
-
-                          // Check if budget exists before proceeding
-                          final expenseExists = await checkIfBudgetExists(user.uid);
-
-
-                          // Parse the expense amount entered by the user
                           double expenseAmount = double.tryParse(expenseController.text) ?? 0.0;
-
-
-
-                          // Update the expense amount in the state if within budget
                           setState(() {
                             expense.amount = expenseAmount.toInt();
-                            expense.description = descriptionController.text;  // Set description from the controller
-
+                            expense.description = descriptionController.text;
                           });
-
-                          // Prepare recurring options if the expense is marked as recurring
                           final String? frequency = isRecurring ? selectedFrequency : null;
                           final DateTime? startDate = isRecurring && startDateController.text.isNotEmpty
                               ? DateFormat('dd/MM/yyyy').parse(startDateController.text)
@@ -442,8 +385,6 @@ class _AddExpenseState extends State<AddExpense> {
                           final DateTime? endDate = isRecurring && !noEndDate && endDateController.text.isNotEmpty
                               ? DateFormat('dd/MM/yyyy').parse(endDateController.text)
                               : null;
-
-                          // Add the expense event to the Bloc
                           context.read<CreateExpenseBloc>().add(
                             CreateExpense(
                               expense: expense,
@@ -464,69 +405,11 @@ class _AddExpenseState extends State<AddExpense> {
                               fontSize: 22, color: Colors.white),
                         )),
                   )
-
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Future<double> _fetchRemainingBudget(String userId) async {
-    // Fetch the remaining budget from Firestore
-    DocumentSnapshot budgetDoc = await FirebaseFirestore.instance
-        .collection('budgets')
-        .doc(userId)
-        .get();
-
-    return budgetDoc.exists ? (budgetDoc['remaining'] ?? 0).toDouble() : 0.0;
-  }
-
-  Future<void> _attemptCreateExpense() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      log('No authenticated user found.');
-      return;
-    }
-
-    final expenseExists = await checkIfBudgetExists(user.uid);
-
-
-    // Retrieve remaining budget
-    double remainingBudget = await _fetchRemainingBudget(user.uid);
-
-    // Get the expense amount from the controller and parse to double
-    double expenseAmount = double.parse(expenseController.text);
-
-    // Check if the expense exceeds the remaining budget
-    if (expenseAmount > remainingBudget) {
-      showAlertDialog(context, 'Expense exceeds your remaining budget of ₱${remainingBudget.toStringAsFixed(2)}.');
-      return;
-    }
-
-    // Set expense amount in state and prepare additional details for recurring expenses
-    setState(() {
-      expense.amount = expenseAmount.toInt();
-    });
-
-    final String? frequency = isRecurring ? selectedFrequency : null;
-    final DateTime? startDate = isRecurring && startDateController.text.isNotEmpty
-        ? DateFormat('dd/MM/yyyy').parse(startDateController.text)
-        : null;
-    final DateTime? endDate = isRecurring && !noEndDate && endDateController.text.isNotEmpty
-        ? DateFormat('dd/MM/yyyy').parse(endDateController.text)
-        : null;
-
-    // Dispatch the CreateExpense event to the bloc
-    context.read<CreateExpenseBloc>().add(
-      CreateExpense(
-        expense: expense,
-        isRecurring: isRecurring,
-        frequency: frequency,
-        startDate: startDate,
-        endDate: endDate,
       ),
     );
   }

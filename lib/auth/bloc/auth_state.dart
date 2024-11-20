@@ -37,7 +37,6 @@ class AuthStateForgotPassword extends AuthState {
 class AuthStateLoggedIn extends AuthState {
   final AuthUser user;
   final Map<String, dynamic> userData;
-
   const AuthStateLoggedIn({
     required this.user,
     required this.userData,
@@ -64,7 +63,6 @@ class AuthStateLoggedOut extends AuthState with EquatableMixin {
     required super.isLoading,
     super.loadingText,
   });
-
   @override
   List<Object?> get props => [exception, isLoading];
 }

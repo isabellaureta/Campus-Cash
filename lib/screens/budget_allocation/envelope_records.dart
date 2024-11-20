@@ -20,16 +20,14 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
   double _income = 0.0;
   double _envelopeExpenses = 0.0;
   double _remainingEnvelope = 0.0;
-  Set<String> _alertedCategories = {}; // Tracks categories that have already triggered an alert
+  Set<String> _alertedCategories = {};
   late List<Envelope> envelopes;
-
 
   @override
   void initState() {
     super.initState();
     _fetchRemainingBudgets();
 
-// Update envelopes list with fetched remaining budgets
     envelopes = filteredCategories
         .where((category) => widget.allocations[category.name] != null && widget.allocations[category.name]! > 0)
         .map((category) {
@@ -50,7 +48,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     try {
       DocumentReference userDocRef = FirebaseFirestore.instance.collection('envelopeAllocations').doc(user.uid);
       DocumentSnapshot docSnapshot = await userDocRef.get();
-
       Map<String, double> fetchedBudgets = {};
 
       if (docSnapshot.exists && docSnapshot.data() != null) {
@@ -64,31 +61,35 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       final envelopeDocs = await userDocRef.collection('envelopes').get();
       double totalExpenses = 0.0;
 
-      // Calculate total expenses by summing (allocatedAmount - remainingBudget) for each envelope
       for (var doc in envelopeDocs.docs) {
         var data = doc.data();
         double allocatedAmount = data['allocatedAmount']?.toDouble() ?? 0.0;
         double remainingBudget = data['remainingBudget']?.toDouble() ?? 0.0;
-        totalExpenses += (allocatedAmount - remainingBudget).clamp(0, allocatedAmount); // Ensures non-negative expense
+
+        totalExpenses += (allocatedAmount - remainingBudget).clamp(0, allocatedAmount);
         fetchedBudgets[data['categoryName']] = remainingBudget;
+
+        if (remainingBudget < 0 && !_alertedCategories.contains(data['categoryName'])) {
+          if (remainingBudget != 0) {
+            _alertedCategories.add(data['categoryName']);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showNegativeBudgetAlert(data['categoryName']);
+            });
+          }
+        }
       }
 
-      // Calculate remaining income by subtracting total expenses from income
       double remainingEnvelope = _income - totalExpenses;
 
-      // Update Firestore with the computed envelopeExpenses and remainingEnvelope totals
       await userDocRef.set({
         'envelopeExpenses': totalExpenses,
-        'remainingEnvelope': remainingEnvelope
+        'remainingEnvelope': remainingEnvelope,
       }, SetOptions(merge: true));
 
-      // Update local state with fetched data
       setState(() {
         _envelopeExpenses = totalExpenses;
         _remainingEnvelope = remainingEnvelope;
         remainingBudgets = fetchedBudgets;
-
-        // Update envelopes list with fetched remaining budgets
         envelopes = filteredCategories
             .where((category) => widget.allocations[category.name] != null && widget.allocations[category.name]! > 0)
             .map((category) {
@@ -102,9 +103,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         }).toList();
       });
 
-      // Check for any category that is near the limit
       _checkBudgetLimits();
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch remaining budgets: $e')),
@@ -112,15 +111,29 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     }
   }
 
-
+  void _showNegativeBudgetAlert(String categoryName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Budget Alert'),
+          content: Text("The remaining budget for $categoryName is below zero."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _checkBudgetLimits() {
     widget.allocations.forEach((categoryName, allocatedBudget) {
       final remaining = remainingBudgets[categoryName] ?? allocatedBudget;
-
-      // Show alert if remaining budget is within 20% of the allocated budget and hasn't been shown yet
-      if (remaining <= 0.2 * allocatedBudget && !_alertedCategories.contains(categoryName)) {
-        _alertedCategories.add(categoryName); // Mark this category as alerted
+      if (remaining <= 0.1 * allocatedBudget && remaining > 0 && !_alertedCategories.contains(categoryName)) {
+        _alertedCategories.add(categoryName);
         _showLimitAlert(categoryName);
       }
     });
@@ -162,8 +175,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         SnackBar(content: Text('Envelope budgeting data deleted successfully')),
       );
       Navigator.push(context, MaterialPageRoute(builder: (context) => BudgetSelectionPage()));
-
-      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete data: $e')),
@@ -195,16 +206,13 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
     }
   }
 
-
   void _editEnvelopeAmount(Envelope envelope) async {
     final remainingController = TextEditingController(text: envelope.remainingBudget);
     final allocatedController = TextEditingController(text: envelope.allocatedBudget);
 
-    // Fetch allocatedAmount and income for the envelope from Firestore
     double allocatedAmount = 0.0;
     double income = 0.0;
     try {
-      // Get allocatedAmount for this specific envelope
       DocumentSnapshot envelopeDoc = await FirebaseFirestore.instance
           .collection('envelopeAllocations')
           .doc(FirebaseAuth.instance.currentUser!.uid)
@@ -213,7 +221,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
           .get();
       allocatedAmount = envelopeDoc['allocatedAmount']?.toDouble() ?? 0.0;
 
-      // Get income for this user
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('envelopeAllocations')
           .doc(FirebaseAuth.instance.currentUser!.uid)
@@ -241,8 +248,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   double remainingAmount = double.tryParse(value) ?? 0.0;
-
-                  // Validate that remainingAmount does not exceed allocatedAmount
                   if (remainingAmount > allocatedAmount) {
                     remainingController.text = envelope.remainingBudget; // Reset to previous value
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -258,7 +263,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                 onChanged: (value) {
                   double newAllocatedAmount = double.tryParse(value) ?? 0.0;
 
-                  // Validate that newAllocatedAmount does not exceed income
                   if (newAllocatedAmount > income) {
                     allocatedController.text = envelope.allocatedBudget; // Reset to previous value
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -279,7 +283,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                 double newRemaining = double.tryParse(remainingController.text) ?? double.parse(envelope.remainingBudget);
                 double newAllocated = double.tryParse(allocatedController.text) ?? double.parse(envelope.allocatedBudget);
 
-                // Update Firestore with new amounts
                 await FirebaseFirestore.instance
                     .collection('envelopeAllocations')
                     .doc(FirebaseAuth.instance.currentUser!.uid)
@@ -289,13 +292,10 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                   'remainingBudget': newRemaining,
                   'allocatedAmount': newAllocated,
                 });
-
-                // Update the local state
                 setState(() {
                   envelope.remainingBudget = newRemaining.toString();
                   envelope.allocatedBudget = newAllocated.toString();
                 });
-
                 Navigator.pop(context);
               },
               child: Text('Save'),
@@ -305,7 +305,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +323,6 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display income and frequency at the top of the screen
             Container(
               padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
               decoration: BoxDecoration(
@@ -376,10 +374,15 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                 itemCount: envelopes.length,
                 itemBuilder: (context, index) {
                   final envelope = envelopes[index];
+                  final remainingBudget = double.parse(envelope.remainingBudget);
+                  final isCompleted = remainingBudget == 0;
+
                   return GestureDetector(
                     onTap: () => _editEnvelopeAmount(envelope),
                     child: Card(
-                      color: Color(envelope.category.color),
+                      color: isCompleted
+                          ? Colors.green.withOpacity(0.7)
+                          : Color(envelope.category.color),
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
@@ -388,17 +391,50 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                           children: [
                             Text(
                               envelope.category.name,
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: isCompleted ? Colors.white : Colors.black, // Adjust text color for visibility
+                              ),
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Remaining: ₱${double.parse(envelope.remainingBudget).toStringAsFixed(2)}',
-                              style: TextStyle(fontSize: 15),
+                              'Remaining: ₱${remainingBudget.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: remainingBudget < 0
+                                    ? Colors.red // Red for negative budgets
+                                    : isCompleted
+                                    ? Colors.white // White for completed
+                                    : Colors.black, // Default color
+                              ),
                             ),
                             Text(
                               'Allocated: ₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
-                              style: TextStyle(fontSize: 12),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isCompleted ? Colors.white : Colors.black,
+                              ),
                             ),
+                            if (isCompleted)
+                              Center(
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 8.0),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                  child: Text(
+                                    'Completed',
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -406,11 +442,10 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                   );
                 },
               ),
-            ),
+            )
           ],
         ),
       ),
     );
   }
-
 }

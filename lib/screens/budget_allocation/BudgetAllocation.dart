@@ -32,29 +32,22 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
     try {
       if (_currentUser == null) return;
 
-      // Check for Priority-Based budgeting data first
       final priorityBasedRef = FirebaseFirestore.instance.collection('PriorityBased').doc(_currentUser!.uid);
       final priorityBasedSnapshot = await priorityBasedRef.get();
 
       if (priorityBasedSnapshot.exists) {
-        // If Priority-Based data exists, navigate to PriorityBasedSummary
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PriorityBasedSummary(userId: _currentUser!.uid),
           ),
         );
-        return; // Exit the method if Priority-Based data is found
+        return;
       }
 
-      // Reference to Pay-Yourself-First records in Firestore
       final payYourselfFirstRef = FirebaseFirestore.instance.collection('PayYourselfFirst').doc(_currentUser!.uid);
-
-      // Fetch the saved Pay-Yourself-First data
       final payYourselfFirstSnapshot = await payYourselfFirstRef.get();
-
       if (payYourselfFirstSnapshot.exists) {
-        // If Pay-Yourself-First data exists, navigate to PayYourselfFirstRecords
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -64,7 +57,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
         return;
       }
 
-      // Check for Envelope Budgeting data
       final envelopeRef = FirebaseFirestore.instance
           .collection('envelopeAllocations')
           .doc(_currentUser!.uid)
@@ -91,7 +83,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
         return;
       }
 
-      // Check for 50/30/20 budgeting data
       final budgetRef = FirebaseFirestore.instance.collection('503020').doc(_currentUser!.uid);
       final budgetSnapshot = await budgetRef.get();
 
@@ -139,7 +130,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
 
   Widget _buildBudgetAllocation() {
     if (savedBudgetSummary != null) {
-      // If there's a saved budget, display the summary similar to BudgetSummaryPage
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -182,7 +172,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
         ],
       );
     } else {
-      // Pass context to _buildBudgetTechniqueSelection
       return _buildBudgetTechniqueSelection(context);
     }
   }
@@ -203,7 +192,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
       },
     );
   }
-
 
   Widget _buildBudgetTechniqueButton(
       String title,
@@ -269,8 +257,6 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
     ).animate().fadeIn().slideX(begin: -0.1, delay: 100.ms, duration: 500.ms);
   }
 
-
-
   Widget _buildBudgetTechniqueSelection(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
@@ -280,7 +266,7 @@ class _BudgetAllocationState extends State<BudgetAllocation> {
             child: _buildBudgetTechniqueButton(
               '50/30/20 Budgeting',
               'Allocate 50% to needs, 30% to wants, and 20% to savings.',
-              'assets/503020.png', // Path to the image asset
+              'assets/503020.png',
 
                   () async {
                 final userId = _currentUser!.uid;

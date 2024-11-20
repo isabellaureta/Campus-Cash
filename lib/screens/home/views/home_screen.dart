@@ -1,10 +1,8 @@
 import 'dart:math';
-
 import 'package:campuscash/screens/budget_allocation/Budget.dart';
 import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
-import 'package:campuscash/main.dart';
 import 'package:campuscash/screens/addIncomeExpense/blocs/create_categorybloc/create_category_bloc.dart';
 import 'package:campuscash/screens/addIncomeExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 import 'package:campuscash/screens/addIncomeExpense/views/add_expense.dart';
@@ -15,7 +13,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../addIncomeExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import '../../budget_allocation/503020_records.dart';
 import '../../budget_allocation/PayYourselfFirstRecords.dart';
@@ -23,13 +20,10 @@ import '../../budget_allocation/PriorityBasedRecords.dart';
 import '../../budget_allocation/envelope_records.dart';
 import '../../goal_loan/addGoalandLoan.dart';
 import '../../stats/stats.dart';
-
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -42,60 +36,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<Widget> _fetchSavedData() async {
     try {
-      if (_currentUser == null) return BudgetSelectionPage(); // Default if no user is signed in.
-
+      if (_currentUser == null) return BudgetSelectionPage();
       final userId = _currentUser!.uid;
-
-      // Check for Priority-Based budgeting data
       final priorityBasedSnapshot = await FirebaseFirestore.instance
           .collection('PriorityBased')
           .doc(userId)
           .get();
-
       if (priorityBasedSnapshot.exists) {
         return PriorityBasedSummary(userId: userId);
       }
 
-      // Check for Pay-Yourself-First data
       final payYourselfFirstSnapshot = await FirebaseFirestore.instance
           .collection('PayYourselfFirst')
           .doc(userId)
           .get();
-
       if (payYourselfFirstSnapshot.exists) {
         return PayYourselfFirstRecords();
       }
-
-      // Check for Envelope Budgeting data
       final envelopeSnapshot = await FirebaseFirestore.instance
           .collection('envelopeAllocations')
           .doc(userId)
           .collection('envelopes')
           .get();
-
       if (envelopeSnapshot.docs.isNotEmpty) {
         final allocations = <String, double>{};
-
         for (var doc in envelopeSnapshot.docs) {
           var data = doc.data();
           allocations[data['categoryName']] = (data['allocatedAmount'] as num).toDouble();
         }
-
         return EnvelopeBudgetingPage(allocations: allocations);
       }
-
-      // Check for 50/30/20 budgeting data
       final budgetSnapshot = await FirebaseFirestore.instance
           .collection('503020')
           .doc(userId)
           .get();
-
       if (budgetSnapshot.exists) {
         final data = budgetSnapshot.data() as Map<String, dynamic>;
         final totalBudget = data['totalBudget'] ?? 0.0;
         final totalExpenses = data['totalExpenses'] ?? 0.0;
         final remainingBudget = totalBudget - totalExpenses;
-
         return BudgetSummaryPage(
           totalBudget: totalBudget,
           totalExpenses: totalExpenses,
@@ -108,11 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
           userId: userId,
         );
       }
-
-      // If no data exists, return BudgetSelectionPage
       return BudgetSelectionPage();
     } catch (e) {
-      // Show error if any exception occurs
       return Scaffold(
         body: Center(
           child: Text('Failed to fetch saved data: $e'),
@@ -120,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               );
-
                               if (newIncome != null) {
                                 setState(() {
                                   if (incomesState is GetIncomesSuccess) {
@@ -220,7 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                             }
                         ),
-
 
                         SpeedDialChild(
                             child: const Icon(
@@ -248,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               );
-
                               if (newExpense != null) {
                                 setState(() {
                                   if (expensesState is GetExpensesSuccess) {
@@ -290,10 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
     );
-
-
   }
-
   Widget _buildBody(int index, List<Expense> expenses, List<Income> incomes) {
     switch (index) {
       case 0:
@@ -307,24 +276,18 @@ class _HomeScreenState extends State<HomeScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
             }
-
             if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-              // If there are documents in the 'budgets' collection, show the Budget page
               return Budget();
             } else {
-              // If no budgets exist, check other budgeting techniques with _fetchSavedData
               return FutureBuilder<Widget>(
-                future: _fetchSavedData(),  // Calls _fetchSavedData if no 'budgets' documents exist
+                future: _fetchSavedData(),
                 builder: (context, savedDataSnapshot) {
                   if (savedDataSnapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
                   }
-
                   if (savedDataSnapshot.hasData) {
-                    // Display the widget returned by _fetchSavedData
                     return savedDataSnapshot.data!;
                   } else {
-                    // If _fetchSavedData encounters an error, default to BudgetSelectionPage
                     return BudgetSelectionPage();
                   }
                 },
@@ -338,6 +301,4 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container();
     }
   }
-
-
 }
