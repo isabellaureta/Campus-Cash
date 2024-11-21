@@ -63,16 +63,27 @@ class _ProfilePageState extends State<ProfilePage> {
         'notificationHour': _selectedTime.hour,
         'notificationMinute': _selectedTime.minute,
       });
+
       if (_emailController.text != user.email) {
-        user.updateEmail(_emailController.text);
+        await user.updateEmail(_emailController.text);
       }
+
       if (_notificationsEnabled) {
         _notificationHelper.scheduleDailyNotification(_selectedTime);
       } else {
         _notificationHelper.cancelNotification();
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Profile Updated!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
+
 
   void _deleteAccount() async {
     showDialog(
@@ -191,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final Color secondaryColor = Colors.blue.shade300;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile Page'),
+        title: Text('Your Account'),
         backgroundColor: secondaryColor,
       ),
       body: SingleChildScrollView(

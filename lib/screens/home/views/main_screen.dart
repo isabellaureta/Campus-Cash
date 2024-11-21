@@ -74,9 +74,11 @@ class _MainScreenState extends State<MainScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   double _remainingBudget = 0;
   String _userName = '';
-  double _totalExpenses = 0;
   String? _profileImageUrl;
   double _totalBalance = 0.0;
+  double _totalIncome = 0.0;
+  double _totalExpenses = 0.0;
+
 
   @override
   void initState() {
@@ -174,23 +176,37 @@ class _MainScreenState extends State<MainScreen> {
           });
         }
       }
+
+      if (_remainingBudget ==
+          0) {
+        DocumentSnapshot priorityBasedDoc = await FirebaseFirestore.instance
+            .collection('PriorityBased').doc(user.uid).get();
+        if (priorityBasedDoc.exists && priorityBasedDoc.data() != null) {
+          setState(() {
+            _remainingBudget =
+                priorityBasedDoc['remainingBudget'] ?? _remainingBudget;
+          });
+        }
+      }
     }
   }
 
   Future<void> fetchTotalMoney() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney')
-        .doc(user.uid);
+    final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(user.uid);
     final snapshot = await totalMoneyDoc.get();
     if (snapshot.exists) {
       setState(() {
         _totalBalance = snapshot['totalMoneyAmount'] ?? 0.0;
+        _totalIncome = snapshot['totalIncome'] ?? 0.0;
+        _totalExpenses = snapshot['totalExpense'] ?? 0.0;
       });
     } else {
       log('No total money document found for user ${user.uid}' as num);
     }
   }
+
 
   List<Transaction_> _getAllTransactions() {
     List<Transaction_> transactions = [];
@@ -309,29 +325,14 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const SizedBox(height: 20,),
             Container(
-              width: MediaQuery
-                  .of(context)
-                  .size
-                  .width * 0.9,
-              height: MediaQuery
-                  .of(context)
-                  .size
-                  .width * 0.4,
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.width * 0.5, // Adjust height for extra text
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Theme
-                        .of(context)
-                        .colorScheme
-                        .primary,
-                    Theme
-                        .of(context)
-                        .colorScheme
-                        .secondary,
-                    Theme
-                        .of(context)
-                        .colorScheme
-                        .tertiary,
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.secondary,
+                    Theme.of(context).colorScheme.tertiary,
                   ],
                   transform: const GradientRotation(pi / 4),
                 ),
@@ -367,14 +368,64 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [],
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400, // Grey circle
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_downward, // Down arrow icon for expense
+                                color: Colors.redAccent,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '₱${NumberFormat('#,##0.00').format(_totalExpenses)}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.red.shade100,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400, // Grey circle
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_upward, // Up arrow icon for income
+                                color: Colors.green.shade800,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '₱${NumberFormat('#,##0.00').format(_totalIncome)}',
+                              style:  TextStyle(
+                                fontSize: 16,
+                                color: Colors.green.shade100,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -630,16 +681,21 @@ class _MainScreenState extends State<MainScreen> {
   void _deleteExpenseTransaction(Expense expense) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Update totalMoneyAmount in totalMoney collection
       final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(user.uid);
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final totalMoneySnapshot = await transaction.get(totalMoneyDoc);
+
         double currentTotalMoney = totalMoneySnapshot.exists
             ? (totalMoneySnapshot['totalMoneyAmount'] ?? 0.0).toDouble()
             : 0.0;
+        double currentTotalExpense = totalMoneySnapshot.exists
+            ? (totalMoneySnapshot['totalExpense'] ?? 0.0).toDouble()
+            : 0.0;
         double updatedTotalMoney = currentTotalMoney + expense.amount;
+        double updatedTotalExpense = currentTotalExpense - expense.amount;
         transaction.set(totalMoneyDoc, {
           'totalMoneyAmount': updatedTotalMoney,
+          'totalExpense': updatedTotalExpense,
         }, SetOptions(merge: true));
       });
 
@@ -662,7 +718,7 @@ class _MainScreenState extends State<MainScreen> {
           widget.expenses.remove(expense);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense transaction deleted and budget updated')),
+          const SnackBar(content: Text('Expense transaction deleted')),
         );
       }).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -682,12 +738,19 @@ class _MainScreenState extends State<MainScreen> {
       final totalMoneyDoc = FirebaseFirestore.instance.collection('totalMoney').doc(user.uid);
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final totalMoneySnapshot = await transaction.get(totalMoneyDoc);
+
         double currentTotalMoney = totalMoneySnapshot.exists
             ? (totalMoneySnapshot['totalMoneyAmount'] ?? 0.0).toDouble()
             : 0.0;
+        double currentTotalIncome = totalMoneySnapshot.exists
+            ? (totalMoneySnapshot['totalIncome'] ?? 0.0).toDouble()
+            : 0.0;
         double updatedTotalMoney = currentTotalMoney - income.amount;
+        double updatedTotalIncome = currentTotalIncome - income.amount;
+
         transaction.set(totalMoneyDoc, {
           'totalMoneyAmount': updatedTotalMoney,
+          'totalIncome': updatedTotalIncome,
         }, SetOptions(merge: true));
       });
 
@@ -710,7 +773,7 @@ class _MainScreenState extends State<MainScreen> {
           widget.incomes.remove(income);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Income transaction deleted and budget updated')),
+          const SnackBar(content: Text('Income transaction deleted')),
         );
       }).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(

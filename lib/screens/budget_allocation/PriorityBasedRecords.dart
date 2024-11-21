@@ -1,9 +1,9 @@
-import 'package:campuscash/screens/budget_allocation/Budget.dart';
 import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_repository/repositories.dart';
+import 'package:intl/intl.dart';
 
 class PriorityBasedRecords extends StatefulWidget {
   final List<Category> selectedCategories;
@@ -56,12 +56,12 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
         'categoryName': category.name,
         'categoryId': category.categoryId,
         'allocatedAmount': double.tryParse(categoryAmountControllers[category]?.text ?? '0') ?? 0.0,
+        'amount': double.tryParse(categoryAmountControllers[category]?.text ?? '0') ?? 0.0,
         'categoryIcon': category.icon,
       };
     }).toList();
 
     final collectionRef = FirebaseFirestore.instance.collection('PriorityBased').doc(user.uid);
-
     await collectionRef.set({
       'allocations': allocationData,
       'totalIncome': totalIncome,
@@ -71,7 +71,6 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Allocation saved successfully!')),
     );
-
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PriorityBasedSummary(userId: user.uid)),
@@ -90,6 +89,7 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
   @override
   Widget build(BuildContext context) {
     final isAllocationValid = totalAllocated <= totalIncome;
+    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
 
     return Scaffold(
       appBar: AppBar(
@@ -120,10 +120,8 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Total Allocation Display
             Text(
-              'Total Allocation: \$${totalAllocated.toStringAsFixed(2)} / \$${totalIncome.toStringAsFixed(2)}',
+              'Total Allocation: \₱${totalAllocated.toStringAsFixed(2)} / \₱${totalIncome.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -131,8 +129,6 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               ),
             ),
             const SizedBox(height: 8),
-
-// Progress Bar
             LinearProgressIndicator(
               value: totalIncome > 0 ? totalAllocated / totalIncome : 0.0,
               backgroundColor: Colors.grey[300],
@@ -141,16 +137,12 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               ),
             ),
             const SizedBox(height: 8),
-
-// Exceeding Income Message
             if (!isAllocationValid)
               const Text(
                 'Warning: Total allocation exceeds your income!',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
               ),
             const SizedBox(height: 16),
-
-            // Category Allocation Input Fields
             Expanded(
               child: ListView.builder(
                 itemCount: widget.selectedCategories.length,
@@ -185,8 +177,6 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Save Allocation Button (disabled if allocation exceeds income)
             ElevatedButton(
               onPressed: isAllocationValid ? _saveAllocation : null,
               child: const Text('Save Allocation'),
@@ -198,14 +188,51 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
   }
 }
 
-class PriorityBasedSummary extends StatelessWidget {
+class PriorityBasedSummary extends StatefulWidget {
   final String userId;
 
   PriorityBasedSummary({required this.userId});
 
-  Future<Map<String, dynamic>?> _fetchAllocationData() async {
-    final doc = await FirebaseFirestore.instance.collection('PriorityBased').doc(userId).get();
-    return doc.exists ? doc.data() : null;
+  @override
+  State<PriorityBasedSummary> createState() => _PriorityBasedSummaryState();
+}
+
+class _PriorityBasedSummaryState extends State<PriorityBasedSummary> {
+  double totalIncome = 0.0;
+  double totalExpenses = 0.0;
+  double remainingBudget = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateTotalExpenses();
+  }
+
+  Future<void> _calculateTotalExpenses() async {
+    final doc = await FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      final allocations = List<Map<String, dynamic>>.from(data['allocations'] ?? []);
+      double calculatedExpenses = allocations.fold(0.0, (sum, category) {
+        final allocatedAmount = category['allocatedAmount'] ?? 0.0;
+        final amount = category['amount'] ?? 0.0;
+        return sum + (allocatedAmount - amount).abs();
+      });
+
+      final income = data['totalIncome'] ?? 0.0;
+      double calculatedRemaining = income - calculatedExpenses;
+
+      setState(() {
+        totalIncome = data['totalIncome'] ?? 0.0;
+        totalExpenses = calculatedExpenses;
+        remainingBudget = calculatedRemaining;
+      });
+
+      await FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).update({
+        'totalExpenses': calculatedExpenses,
+        'remainingBudget': calculatedRemaining,
+      });
+    }
   }
 
   Future<void> _deleteAllocation(BuildContext context) async {
@@ -217,12 +244,12 @@ class PriorityBasedSummary extends StatelessWidget {
           content: const Text("Are you sure you want to delete this allocation? This action cannot be undone."),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // User pressed "No"
+              onPressed: () => Navigator.of(context).pop(false),
               child: const Text("No"),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true), // User pressed "Yes"
-              child: const Text("Yes"),
+              onPressed: () => Navigator.of(context).pop(false),
+        child: const Text("Yes"),
             ),
           ],
         );
@@ -230,24 +257,22 @@ class PriorityBasedSummary extends StatelessWidget {
     );
 
     if (confirmation == true) {
-      await FirebaseFirestore.instance.collection('PriorityBased').doc(userId).delete();
+      await FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).delete();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Allocation deleted successfully.')),
       );
-
-      // Navigate to AddBudget after deletion
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => BudgetSelectionPage()),
       );
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Priority-Based Allocation Summary'),
+        title: const Text('Budget Records'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -256,26 +281,16 @@ class PriorityBasedSummary extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: _fetchAllocationData(),
+        future: FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).get().then((doc) => doc.data()),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (!snapshot.hasData || snapshot.data == null) {
             return const Center(child: Text('No allocation data available.'));
           }
-
           final data = snapshot.data!;
-          final totalIncome = data['totalIncome'];
           final allocations = List<Map<String, dynamic>>.from(data['allocations'] ?? []);
-
-          // Sort allocations by priority, handling null values
-          allocations.sort((a, b) {
-            final priorityA = a['priority'] ?? double.infinity; // Assign a default high priority if null
-            final priorityB = b['priority'] ?? double.infinity;
-            return priorityB.compareTo(priorityA); // Higher priority comes first
-          });
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -286,11 +301,25 @@ class PriorityBasedSummary extends StatelessWidget {
                   color: Colors.blue.shade50,
                   margin: const EdgeInsets.only(bottom: 16.0),
                   child: ListTile(
-                    title: Text(
-                      'Income: \$${totalIncome.toStringAsFixed(2)}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Income: \₱${numberFormat.format(totalIncome)}',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total Expenses: \₱${numberFormat.format(totalExpenses)}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Remaining Budget: \₱${numberFormat.format(remainingBudget)}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                      ],
                     ),
-
                     leading: const Icon(Icons.account_balance_wallet, color: Colors.blue),
                   ),
                 ),
@@ -305,7 +334,7 @@ class PriorityBasedSummary extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final allocation = allocations[index];
                       final priorityLevel = index + 1;
-                      final priorityColor = Color.lerp(Colors.red, Colors.green, index / allocations.length);
+                      final priorityColor = Color.lerp(Colors.red.shade400, Colors.green.shade400, index / allocations.length);
 
                       return Card(
                         color: priorityColor!.withOpacity(0.8),
@@ -315,30 +344,48 @@ class PriorityBasedSummary extends StatelessWidget {
                         ),
                         elevation: 4,
                         child: ListTile(
-                          leading: allocation['categoryIcon'] != null
-                              ? Image.asset(
-                            allocation['categoryIcon'],
-                            width: 40,
-                            height: 40,
-                          )
-                              : const Icon(Icons.category, size: 40),
+                          onTap: () => _editCategory(context, allocation, allocations, totalIncome),
+                          leading: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                priorityLevel <= 3 ? Icons.star : null,
+                                color: Colors.white,
+                              ),
+                              if (priorityLevel > 3)
+                                Text(
+                                  priorityLevel.toString(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                                ),
+                              const SizedBox(width: 8),
+                              allocation['categoryIcon'] != null
+                                  ? Image.asset(
+                                allocation['categoryIcon'],
+                                width: 30,
+                                height: 30,
+                              )
+                                  : const Icon(Icons.category, size: 40),
+                            ],
+                          ),
                           title: Text(
                             allocation['categoryName'],
                             style: TextStyle(
-                              fontSize: 16 + (allocations.length - priorityLevel).toDouble(),
+                              fontSize: 12 + (allocations.length - priorityLevel).toDouble(),
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
                           subtitle: Text(
-                            'Allocated: \$${allocation['allocatedAmount'].toStringAsFixed(2)}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            'Allocated: ₱${allocation['allocatedAmount'].toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
                           ),
-                          trailing: Icon(
-                            priorityLevel == 1
-                                ? Icons.star
-                                : Icons.arrow_downward,
-                            color: Colors.white,
+                          trailing: Text(
+                            '₱${allocation['amount']?.toStringAsFixed(2) ?? "0.00"}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       );
@@ -350,6 +397,109 @@ class PriorityBasedSummary extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  void _editCategory(
+      BuildContext context,
+      Map<String, dynamic> selectedCategory,
+      List<Map<String, dynamic>> allCategories,
+      double totalIncome,
+      ) {
+    final allocatedAmountController = TextEditingController(
+      text: selectedCategory['allocatedAmount'].toStringAsFixed(2),
+    );
+    final amountController = TextEditingController(
+      text: selectedCategory['amount'].toStringAsFixed(2),
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit ${selectedCategory['categoryName']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: allocatedAmountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Allocated Amount',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Parse new values
+                final newAllocatedAmount =
+                    double.tryParse(allocatedAmountController.text) ?? 0.0;
+                final newAmount = double.tryParse(amountController.text) ?? 0.0;
+
+                // Validation: Amount cannot exceed AllocatedAmount
+                if (newAmount > newAllocatedAmount) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Amount cannot exceed Allocated Amount.'),
+                    ),
+                  );
+                  return;
+                }
+
+                // Validation: Total AllocatedAmount cannot exceed TotalIncome
+                final updatedTotalAllocated = allCategories.fold<double>(0.0, (sum, category) {
+                  if (category == selectedCategory) {
+                    return sum + newAllocatedAmount;
+                  }
+                  return sum + (category['allocatedAmount'] ?? 0.0);
+                });
+
+                if (updatedTotalAllocated > totalIncome) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Total allocation exceeds total income.'),
+                    ),
+                  );
+                  return;
+                }
+                await FirebaseFirestore.instance
+                    .collection('PriorityBased')
+                    .doc(widget.userId)
+                    .update({
+                  'allocations': allCategories.map((category) {
+                    if (category['categoryId'] == selectedCategory['categoryId']) {
+                      return {
+                        ...category,
+                        'allocatedAmount': newAllocatedAmount,
+                        'amount': newAmount,
+                      };
+                    }
+                    return category;
+                  }).toList(),
+                });
+
+                Navigator.pop(context);
+                setState(() {});
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -365,8 +515,8 @@ class PriorityBasedSummary extends StatelessWidget {
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text('Delete Allocation', style: TextStyle(color: Colors.red)),
                 onTap: () {
-                  Navigator.of(context).pop(); // Close the bottom sheet
-                  _deleteAllocation(context); // Confirm deletion
+                  Navigator.of(context).pop();
+                  _deleteAllocation(context);
                 },
               ),
             ],

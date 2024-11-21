@@ -23,16 +23,15 @@ class _CategorySelectionPageState extends State<CategorySelectionPage> {
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,  // 4 items per row
+            crossAxisCount: 4,
             crossAxisSpacing: 8.0,
             mainAxisSpacing: 8.0,
-            childAspectRatio: 0.9, // Adjust this value to change the height of the boxes
+            childAspectRatio: 0.9,
           ),
           itemCount: predefinedCategories.length,
           itemBuilder: (context, index) {
             final category = predefinedCategories[index];
             final isSelected = selectedCategories.contains(category);
-
             return GestureDetector(
               onTap: () {
                 setState(() {
@@ -58,9 +57,9 @@ class _CategorySelectionPageState extends State<CategorySelectionPage> {
                       category.name,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 12,           // Font size of the text
-                        letterSpacing: .8,     // Adjusts the spacing between characters
-                        height: 1,            // Adjusts the line height (line spacing)
+                        fontSize: 12,
+                        letterSpacing: .8,
+                        height: 1,
                       ),
                     ),
                   ],
@@ -83,9 +82,7 @@ class _CategorySelectionPageState extends State<CategorySelectionPage> {
 class RankCategoriesPage extends StatefulWidget {
   final List<Category> selectedCategories;
   final void Function(List<Category>) onRankingDone;
-
   RankCategoriesPage({required this.selectedCategories, required this.onRankingDone});
-
   @override
   _RankCategoriesPageState createState() => _RankCategoriesPageState();
 }

@@ -63,7 +63,14 @@ class FirebaseExpenseRepo implements ExpenseRepository {
         expenseData['endDate'] = endDate != null ? Timestamp.fromDate(endDate) : null;
       }
 
+      await FirebaseFirestore.instance.collection('totalMoney').doc(user.uid).update({
+        'totalExpense': FieldValue.increment(expense.amount.toDouble()),
+        'totalMoneyAmount': FieldValue.increment(-expense.amount.toDouble()),
+      });
+
+
       await expenseCollection.doc(updatedExpense.userId).set(expenseData);
+
       await _updateTotalMoney(user.uid, expense.amount.toDouble(), false);
 
       await _updateEnvelopeExpenses(user.uid, updatedExpense.amount.toDouble());
@@ -329,13 +336,19 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
 
   @override
   Future<void> createIncome(Income income) async {
+
+    await FirebaseFirestore.instance.collection('totalMoney').doc(income.userId).update({
+      'totalIncome': FieldValue.increment(income.amount.toDouble()),
+      'totalMoneyAmount': FieldValue.increment(income.amount.toDouble()),
+    });
+
     try {
       await incomeCollection
           .doc(income.userId)
           .set(income.toEntity().toDocument());
       await _updateRemainingBudget(income.userId, income.amount);
       await _updateTotalMoney(income.userId, income.amount.toDouble(), true);
-      log('Income created and budget updated successfully.');
+      log('Income created!.');
     } catch (e) {
       log('Failed to create income: ${e.toString()}');
       rethrow;
