@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'envelope_budgeting_page.dart';
 
 class EnvelopeBudgetingPage extends StatefulWidget {
@@ -308,6 +309,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
     return Scaffold(
       appBar: AppBar(
         title: Text('Envelope Budgeting'),
@@ -336,7 +338,8 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Income: ₱${_income.toStringAsFixed(2)}',
+                        'Income: ₱${numberFormat.format(_income)}',
+
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
                       ),
                     ],
@@ -345,7 +348,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Remaining Income: ₱${_remainingEnvelope.toStringAsFixed(2)}',
+                        'Remaining Income: ₱${numberFormat.format(_remainingEnvelope)}',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
                       ),
                     ],
@@ -354,7 +357,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Expenses: ₱${_envelopeExpenses.toStringAsFixed(2)}',
+                        'Total Expenses: ₱${numberFormat.format(_envelopeExpenses)}',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent),
                       ),
                     ],
@@ -399,7 +402,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                             ),
                             SizedBox(height: 10),
                             Text(
-                              'Remaining: ₱${remainingBudget.toStringAsFixed(2)}',
+                              'Remaining: ₱${numberFormat.format(remainingBudget)}',
                               style: TextStyle(
                                 fontSize: 15,
                                 color: remainingBudget < 0
@@ -410,7 +413,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
                               ),
                             ),
                             Text(
-                              'Allocated: ₱${double.parse(envelope.allocatedBudget).toStringAsFixed(2)}',
+                              'Allocated: ₱${numberFormat.format(double.parse(envelope.allocatedBudget))}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: isCompleted ? Colors.white : Colors.black,

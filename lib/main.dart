@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'package:timezone/data/latest_all.dart' as tz;
-
 import 'package:bloc/bloc.dart';
 import 'package:campuscash/firebase_options.dart';
 import 'package:campuscash/screens/home/views/home_screen.dart';

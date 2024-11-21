@@ -359,7 +359,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     generateChartData();
                   });
                 },
-                items: <String>['Expenses', 'Income', 'Expense Flow', 'Income Flow', 'Transaction Analysis']
+                items: <String>['Expenses', 'Income', 'Transaction Analysis']
                     .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,

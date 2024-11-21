@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'envelope_records.dart';
 
@@ -250,6 +251,7 @@ class _AllocationPageState extends State<AllocationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
     return Scaffold(
       appBar: AppBar(
         title: Text('Allocate Your Budget'),
@@ -264,7 +266,8 @@ class _AllocationPageState extends State<AllocationPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text('Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
+            Text(
+                'Remaining Income: \₱${numberFormat.format(remainingIncome)}',
                 style: TextStyle(
                   color: remainingIncome < 0 ? Colors.red : Colors.black,
                 )

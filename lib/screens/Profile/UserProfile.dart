@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../home/views/login_view.dart';
+import '../home/views/welcome_view.dart';
 import 'Notifications.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -33,12 +34,14 @@ class _ProfilePageState extends State<ProfilePage> {
   void _loadUserProfile() async {
     User? user = _auth.currentUser;
     if (user != null) {
+      setState(() {
+        _emailController.text = user.email ?? '';
+      });
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
       setState(() {
-        _nameController.text = userDoc['name'];
-        _emailController.text = user.email!;
+        _nameController.text = userDoc['name'] ?? '';
         _profileImageUrl = userDoc['profileImageUrl'];
-        _notificationsEnabled = userDoc['notificationsEnabled'];
+        _notificationsEnabled = userDoc['notificationsEnabled'] ?? false;
         _selectedTime = TimeOfDay(
           hour: (userDoc['notificationHour'] ?? 20) as int,
           minute: (userDoc['notificationMinute'] ?? 0) as int,
@@ -96,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     await user.delete();
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => const LoginView()),
+                      MaterialPageRoute(builder: (context) => const WelcomeView()),
                           (route) => false,
                     );
                   } catch (e) {
@@ -189,7 +192,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile Page'),
-        backgroundColor: primaryColor,
+        backgroundColor: secondaryColor,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20.0),
@@ -223,23 +226,24 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                labelStyle: TextStyle(color: primaryColor),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: secondaryColor),
-                ),
+          TextField(
+            controller: _emailController,
+            readOnly: true, // Makes the field non-editable
+            decoration: InputDecoration(
+              labelText: 'Email',
+              labelStyle: TextStyle(color: primaryColor),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: primaryColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: secondaryColor),
               ),
             ),
+          ),
             SizedBox(height: 16),
             SwitchListTile(
               activeColor: primaryColor,
-              title: Text('Enable Notifications', style: TextStyle(color: Colors.blue)),
+              title: Text('Enable Notifications', style: TextStyle(color: Colors.pink)),
               value: _notificationsEnabled,
               onChanged: (bool value) {
                 setState(() {
@@ -255,19 +259,7 @@ class _ProfilePageState extends State<ProfilePage> {
             SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              ),
-              onPressed: () => _selectTime(context),
-              child: Text('Select Notification Time', style: TextStyle(color: Colors.white)),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: secondaryColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

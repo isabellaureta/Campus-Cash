@@ -542,11 +542,10 @@ class _MainScreenState extends State<MainScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      "\₱${transactions[i].amount}0",
+                                      "\₱${NumberFormat('#,##0.00').format(transactions[i].amount)}",
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: transactions[i].isIncome ? Colors
-                                            .green : Colors.redAccent,
+                                        color: transactions[i].isIncome ? Colors.green : Colors.redAccent,
                                         fontWeight: FontWeight.w400,
                                       ),
                                     ),

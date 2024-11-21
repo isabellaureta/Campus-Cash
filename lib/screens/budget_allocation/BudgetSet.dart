@@ -59,7 +59,7 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
                   _selectedPeriod = newValue!;
                 });
               },
-              items: <String>['daily', 'weekly', 'monthly']
+              items: <String>['Daily', 'Weekly', 'Monthly']
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -69,12 +69,11 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
             ),
             SizedBox(height: 20),
             CheckboxListTile(
-              title: Text("Automatically regenerate income after each period"),
+              title: Text("Automatically regenerate income after each selected period"),
               value: _autoRegenerateIncome,
               onChanged: (bool? value) {
                 setState(() {
                   _autoRegenerateIncome = value!;
-                  // Uncheck carry-over if auto-regenerate is turned off
                   if (!_autoRegenerateIncome) _carryOverExcessIncome = false;
                 });
               },

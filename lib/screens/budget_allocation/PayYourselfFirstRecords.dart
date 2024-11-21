@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'BudgetSelectionPage.dart';
 
@@ -213,6 +214,7 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
 
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
         title: Text('Pay Yourself First Record'),
@@ -247,7 +249,7 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Remaining Income: ₱${(record['remainingYourself'] ?? 0.0).toStringAsFixed(2)}',
+                              Text('Remaining Income: ₱${numberFormat.format(record['remainingYourself'] ?? 0.0)}',
                               style: TextStyle(fontSize: 16)),
                               IconButton(
                                 icon: Icon(Icons.settings, color: Colors.red),
@@ -255,10 +257,10 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                               ),
                             ],
                           ),
-                          Text('Total Income: ₱${(totalIncome).toStringAsFixed(2)}'),
-                          Text('Total Savings: ₱${(record['totalSavings'] ?? 0.0).toStringAsFixed(2)}'),
-                          Text('Excess Money: ₱${(record['excessMoney'] ?? 0.0).toStringAsFixed(2)}'),
-                          Text('Total Expenses: ₱${(record['yourselfExpenses'] ?? 0.0).toStringAsFixed(2)}'),
+                          Text('Total Income: ₱${numberFormat.format(totalIncome)}'),
+                          Text('Total Savings: ₱${numberFormat.format(record['totalSavings'] ?? 0.0)}'),
+                          Text('Excess Money: ₱${numberFormat.format(record['excessMoney'] ?? 0.0)}'),
+                          Text('Total Expenses: ₱${numberFormat.format(record['yourselfExpenses'] ?? 0.0)}'),
                           Divider(),
                           Text('Allocations:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ListView.builder(
@@ -337,12 +339,12 @@ class _PayYourselfFirstRecordsState extends State<PayYourselfFirstRecords> {
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              '₱${amount.toString()}',
-                                              style: TextStyle(fontSize: 15, color: amountColor),
+                                              'Allocated: ₱${numberFormat.format(allocatedAmount)}',
+                                              style: TextStyle(fontSize: 13),
                                             ),
                                             Text(
-                                              'Allocated: ₱${allocatedAmount.toString()}',
-                                              style: TextStyle(fontSize: 13),
+                                              '₱${numberFormat.format(amount)}',
+                                              style: TextStyle(fontSize: 18, color: amountColor),
                                             ),
                                           ],
                                         ),

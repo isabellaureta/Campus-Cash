@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '503020_records.dart';
 
 class BudgetInputPage extends StatefulWidget {
@@ -406,6 +407,7 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   Widget _buildBudgetSummary() {
     final totalBudgetToSpend = widget.totalBudget * 0.50 + widget.totalBudget * 0.30;
     final remainingBudget = totalBudgetToSpend - _totalExpenses;
+    final numberFormat = NumberFormat('#,##0.00');
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -413,17 +415,17 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Total Budget: ₱${widget.totalBudget.toStringAsFixed(2)}',
+            'Total Budget: ₱${numberFormat.format(widget.totalBudget)}',
             style: TextStyle(fontSize: 16),
           ),
           SizedBox(height: 8.0),
           Text(
-            'Total Budget to Spend: ₱${totalBudgetToSpend.toStringAsFixed(2)}',
+            'Total Budget to Spend: ₱${numberFormat.format(totalBudgetToSpend)}',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 8.0),
           Text(
-            'Total Expenses: ₱${_totalExpenses.toStringAsFixed(2)}',
+            'Total Expenses: ₱${numberFormat.format(_totalExpenses)}',
             style: TextStyle(fontSize: 16),
           ),
           SizedBox(height: 16.0),
@@ -433,6 +435,7 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
   }
 
   Widget _buildCategoryTab(String categoryName, double budget, double expenses, List<dynamic> categories) {
+    final numberFormat = NumberFormat('#,##0.00'); // Define the formatter
     final List<dynamic> tabCategories = (categoryName == 'Savings')
         ? _getSavingsCategoriesForTab(savingsCategoryIds)
         : categories;
@@ -455,11 +458,11 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$categoryName Budget: ₱${budget.toStringAsFixed(2)}',
+            '$categoryName Budget: ₱${numberFormat.format(budget)}',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           Text(
-            'Expenses: ₱${expenses.toStringAsFixed(2)}',
+            'Expenses: ₱${numberFormat.format(expenses)}',
             style: TextStyle(fontSize: 16),
           ),
           LinearProgressIndicator(

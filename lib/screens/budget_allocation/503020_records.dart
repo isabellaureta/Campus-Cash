@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
+import 'package:intl/intl.dart';
 
 class BudgetSummaryPage extends StatefulWidget {
   final String userId;
@@ -146,6 +147,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
   }
 
   Widget _buildCategoryList(List<dynamic> categories, double budgetAmount, String categoryType) {
+    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
     if (categories.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
@@ -187,12 +189,12 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           ),
           subtitle: originalAmount > 0
               ? Text(
-            'Allocated: ₱${originalAmount.toStringAsFixed(2)}',
+            'Allocated: ₱${numberFormat.format(originalAmount)}',
             style: TextStyle(fontSize: 10.0),
           )
               : null,
           trailing: Text(
-            '₱${amount.toStringAsFixed(2)}',
+            '₱${numberFormat.format(amount)}',
             style: TextStyle(fontSize: 16.0),
           ),
           onTap: categoryType != 'Savings'
@@ -308,13 +310,14 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
   }
 
   Widget _buildTabContent(String tabName, List<dynamic> categories, double budgetAmount) {
+    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$tabName Categories: ₱${budgetAmount.toStringAsFixed(2)}',
+            '$tabName Categories: ₱${numberFormat.format(budgetAmount)}',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 16.0),
@@ -439,6 +442,7 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
           final totalBudget = budgetData['totalBudget'] ?? 0.0;
           final totalExpenses = budgetData['totalExpenses'] ?? 0.0;
           final remainingBudget = budgetData['remainingBudget'] ?? 0.0;
+          final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
 
           double totalBudgetToSpend = totalBudget * 0.50 + totalBudget * 0.30;;
 
@@ -450,22 +454,22 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total Budget: ₱${totalBudget.toStringAsFixed(2)}',
+                      'Total Budget: ₱${numberFormat.format(totalBudget)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
                     Text(
-                      'Total Budget to Spend: ₱${totalBudgetToSpend.toStringAsFixed(2)}',
+                      'Total Budget to Spend: ₱${numberFormat.format(totalBudgetToSpend)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 8.0),
                     Text(
-                      'Total Expenses: ₱${totalExpenses.toStringAsFixed(2)}',
+                      'Total Expenses: ₱${numberFormat.format(totalExpenses)}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8.0),
                     Text(
-                      'Remaining Budget: ₱${(totalBudgetToSpend - totalExpenses).toStringAsFixed(2)}',
+                      'Remaining Budget: ₱${numberFormat.format(totalBudgetToSpend - totalExpenses)}',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                     SizedBox(height: 16.0),

@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'Budget.dart';
 import 'BudgetAllocation.dart';
 
@@ -18,7 +17,7 @@ class BudgetSelectionPage extends StatelessWidget {
             _buildBudgetOption(
               context,
               title: 'Budget',
-              description: 'Manage your budget and track expenses',
+              description: 'Set and manage your budget and track expenses',
               imagePath: 'assets/Budget.png',
               onTap: () {
                 Navigator.push(
@@ -30,7 +29,7 @@ class BudgetSelectionPage extends StatelessWidget {
             _buildBudgetOption(
               context,
               title: 'Budgeting Technique',
-              description: 'Allocate funds and view spending categories',
+              description: 'Select a budgeting technique and allocate money to different expenses',
               imagePath: 'assets/BudgetTechnique.png',
               onTap: () {
                 Navigator.push(

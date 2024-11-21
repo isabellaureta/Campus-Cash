@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'PayYourselfFirstRecords.dart';
 
@@ -92,6 +93,7 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
 
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
         title: Text('Pay Yourself First'),
@@ -117,12 +119,12 @@ class _PayYourselfFirstPageState extends State<PayYourselfFirstPage> {
             if (showResult) ...[
               SizedBox(height: 20),
               Text(
-                'Total Savings: \$${totalSavings.toStringAsFixed(2)}',
+                'Total Savings: \$${numberFormat.format(totalSavings)}',
                 style: TextStyle(fontSize: 20),
               ),
               SizedBox(height: 10),
               Text(
-                'Excess Money: \$${excessMoney.toStringAsFixed(2)}',
+                'Excess Money: \$${numberFormat.format(excessMoney)}',
                 style: TextStyle(fontSize: 20),
               ),
               SizedBox(height: 20),
@@ -303,6 +305,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
         title: Text('Show Allocation'),
@@ -318,7 +321,7 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
         child: Column(
           children: [
             Text(
-              'Remaining Income: \₱${remainingIncome.toStringAsFixed(2)}',
+              'Remaining Income: \₱${numberFormat.format(remainingIncome)}',
               style: TextStyle(
                 color: remainingIncome < 0 ? Colors.red : Colors.black,
               ),

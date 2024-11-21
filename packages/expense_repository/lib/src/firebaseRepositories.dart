@@ -63,7 +63,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
         expenseData['endDate'] = endDate != null ? Timestamp.fromDate(endDate) : null;
       }
 
-      await expenseCollection.doc(updatedExpense.expenseId).set(expenseData);
+      await expenseCollection.doc(updatedExpense.userId).set(expenseData);
       await _updateTotalMoney(user.uid, expense.amount.toDouble(), false);
 
       await _updateEnvelopeExpenses(user.uid, updatedExpense.amount.toDouble());
@@ -244,28 +244,18 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   Future<void> _deductFromPriorityBasedCategory(String userId, String categoryId, double expenseAmount) async {
     try {
-      // Reference to the specific user's PriorityBased collection document
       DocumentReference priorityDocRef = FirebaseFirestore.instance.collection('PriorityBased').doc(userId);
-
-      // Fetch the user's PriorityBased document
       DocumentSnapshot prioritySnapshot = await priorityDocRef.get();
 
       if (prioritySnapshot.exists) {
-        // Retrieve the allocations of categories
         Map<String, dynamic> categoriesData = prioritySnapshot['categories'] ?? {};
 
-        // Check if the categoryId exists in the categories data
         if (categoriesData.containsKey(categoryId)) {
           double allocatedAmount = categoriesData[categoryId]['allocatedAmount'] ?? 0.0;
-
-          // Ensure we don't have a negative allocatedAmount after deduction
           double updatedAllocatedAmount = (allocatedAmount - expenseAmount).clamp(0.0, double.infinity);
-
-          // Update the category's allocated amount in the PriorityBased document
           await priorityDocRef.update({
             'categories.$categoryId.allocatedAmount': updatedAllocatedAmount,
           });
-
           log('Deducted \$${expenseAmount} from category $categoryId. New allocatedAmount = \$${updatedAllocatedAmount}');
         } else {
           log('Category $categoryId not found in PriorityBased categories.');
@@ -341,7 +331,7 @@ class FirebaseExpenseRepo2 implements IncomeRepository {
   Future<void> createIncome(Income income) async {
     try {
       await incomeCollection
-          .doc(income.incomeId)
+          .doc(income.userId)
           .set(income.toEntity().toDocument());
       await _updateRemainingBudget(income.userId, income.amount);
       await _updateTotalMoney(income.userId, income.amount.toDouble(), true);
