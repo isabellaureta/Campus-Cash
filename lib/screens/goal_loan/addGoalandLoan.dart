@@ -30,16 +30,26 @@ class _CustomTabBarsPageState extends State<CustomTabBarsPage> {
 
   Future<void> _deleteGoal(DocumentSnapshot document) async {
     try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw 'User not logged in';
+
       await FirebaseFirestore.instance
           .collection('goals')
-          .doc(document.id)
+          .doc(user.uid) // Access the user's document
+          .collection('userGoals') // Access the subcollection
+          .doc(document.id) // Delete the specific goal by ID
           .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Goal deleted successfully')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete goal: $e')),
       );
     }
   }
+
 
   Widget _buildGoalCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;

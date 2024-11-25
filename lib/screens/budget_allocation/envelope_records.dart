@@ -309,7 +309,7 @@ class _EnvelopeBudgetingPageState extends State<EnvelopeBudgetingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
         title: Text('Envelope Budgeting'),

@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:campuscash/screens/budget_allocation/BudgetSelectionPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:flutter/material.dart';
@@ -272,20 +273,11 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
       }
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BudgetSummaryPage(
-          userId: userId,
-          totalExpenses: totalExpenses,
-          remainingBudget: calculatedRemainingBudget,
-          totalBudget: totalBudget,
-          expenses: _expenses,
-        ),
-      ),
-    );
-  }
+    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.pop(context);
 
+  }
 
   Future<void> _adjustTotalBudgetAfterExpense(String categoryName, double amount) async {
     final userId = widget.userId;
@@ -510,8 +502,8 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
                         _updateExpense(
                           categoryId,
                           value,
-                          budget,  // Pass the budget for this tab
-                          categoryName,  // Pass the tab name for error messaging
+                          budget,
+                          categoryName,
                         );
                         _expenseController.value = _expenseController.value.copyWith(
                           selection: textSelection,
@@ -565,19 +557,16 @@ class _Budget503020PageState extends State<Budget503020Page> with SingleTickerPr
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Needs Tab
                 Column(
                   children: [
                     Expanded(child: _buildCategoryTab('Needs', needsBudget, _needsExpenses, _getCategoriesForTab(needsCategoryIds))),
                   ],
                 ),
-                // Wants Tab
                 Column(
                   children: [
                     Expanded(child: _buildCategoryTab('Wants', wantsBudget, _wantsExpenses, _getCategoriesForTab(wantsCategoryIds))),
                   ],
                 ),
-                // Savings Tab - uses predefined savings categories directly
                 Column(
                   children: [
                     Expanded(child: _buildCategoryTab('Savings', savingsBudget, _savingsExpenses, savingsCategories)),

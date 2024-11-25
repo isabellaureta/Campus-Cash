@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../constants/colors.dart';
+import 'login_view.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -332,8 +333,10 @@ class _RegisterViewState extends State<RegisterView> {
                   const SizedBox(height: 25.0),
                   TextButton(
                     onPressed: () {
-                      Navigator.pop(context); // Navigate back to LoginView
-                    },
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginView()),
+                      );                    },
                     child: Text.rich(
                       TextSpan(
                         text: 'Already have an account? ',

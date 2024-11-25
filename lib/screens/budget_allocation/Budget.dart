@@ -79,15 +79,20 @@ class Budget extends StatelessWidget {
     // Calculate remaining budget percentage
     double remainingPercentage = (remaining / budget) * 100;
 
-    // Show warning if remaining is less than or equal to 20%
-    if (remainingPercentage <= 20 && remaining > 0) {
+    // Check if the budget is completed
+    final isBudgetCompleted = remaining == 0;
+
+    // Show warning if remaining is less than or equal to 10%
+    if (remainingPercentage <= 10 && remaining > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
               title: Text('Warning'),
-              content: Text('You are near your budget limit! Only ₱${remaining.toStringAsFixed(2)} left.'),
+              content: Text(
+                'You are near your budget limit! Only ₱${remaining.toStringAsFixed(2)} left.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -108,7 +113,9 @@ class Budget extends StatelessWidget {
           builder: (BuildContext context) {
             return AlertDialog(
               title: Text('Budget Exceeded'),
-              content: Text('You have exceeded your budget by ₱${remaining.abs().toStringAsFixed(2)}.'),
+              content: Text(
+                'You have exceeded your budget by ₱${remaining.abs().toStringAsFixed(2)}.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -148,7 +155,8 @@ class Budget extends StatelessWidget {
           },
         );
       },
-        child: Card(child: Card(
+      child: Card(
+        child: Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           elevation: 6,
           margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -166,15 +174,30 @@ class Budget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Remaining: ₱${remaining.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: remaining < 0 ? Colors.red : Colors.black,
+                // Display "Budget completed" when remaining is 0
+                if (isBudgetCompleted)
+                  Center(
+                    child: Text(
+                      'Budget completed',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
+
+                // Otherwise, show the remaining amount
+                if (!isBudgetCompleted)
+                  Text(
+                    'Remaining: ₱${remaining.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: remaining < 0 ? Colors.red : Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 SizedBox(height: 8),
                 Text(
                   'Budget: ₱${budget.toStringAsFixed(2)}',
@@ -191,7 +214,7 @@ class Budget extends StatelessWidget {
             ),
           ),
         ),
-        )
+      ),
     );
   }
 }

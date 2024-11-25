@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'PayYourselfFirstRecords.dart';
 
 class PayYourselfFirstPage extends StatefulWidget {
   @override
@@ -233,10 +232,10 @@ class _ShowAllocationPageState extends State<ShowAllocationPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Allocations saved successfully!')),
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => PayYourselfFirstRecords()),
-      );
+      Navigator.pop(context);
+      Navigator.pop(context);
+      Navigator.pop(context);
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save allocations: $e')),

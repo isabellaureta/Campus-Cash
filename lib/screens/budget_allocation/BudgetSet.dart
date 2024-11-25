@@ -19,17 +19,65 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
     if (user != null) {
       double budget = double.parse(_budgetController.text);
 
+      DateTime nextRegeneration = DateTime.now();
+      if (_autoRegenerateIncome) {
+        switch (_selectedPeriod) {
+          case 'daily':
+            nextRegeneration = nextRegeneration.add(const Duration(days: 1));
+            break;
+          case 'weekly':
+            nextRegeneration = nextRegeneration.add(const Duration(days: 7));
+            break;
+          case 'monthly':
+            nextRegeneration = DateTime(
+              nextRegeneration.year,
+              nextRegeneration.month + 1,
+              nextRegeneration.day,
+            );
+            break;
+        }
+      }
+
       await FirebaseFirestore.instance.collection('budgets').doc(user.uid).set({
         'budget': budget,
         'remaining': budget,
         'period': _selectedPeriod,
         'autoRegenerateIncome': _autoRegenerateIncome,
         'carryOverExcessIncome': _carryOverExcessIncome,
+        'nextRegeneration': nextRegeneration,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       Navigator.pop(context);
     }
+  }
+
+
+  Future<void> _scheduleBudgetRegeneration(String userId, double budget, String period) async {
+    DateTime nextTimestamp;
+
+    // Determine the next timestamp based on frequency
+    switch (period) {
+      case 'daily':
+        nextTimestamp = DateTime.now().add(const Duration(days: 1));
+        break;
+      case 'weekly':
+        nextTimestamp = DateTime.now().add(const Duration(days: 7));
+        break;
+      case 'monthly':
+        nextTimestamp = DateTime.now().add(const Duration(days: 30)); // Simplified logic for demo
+        break;
+      default:
+        return; // Invalid period, do nothing
+    }
+
+    // Save the next regeneration timestamp
+    await FirebaseFirestore.instance.collection('budgetSchedules').doc(userId).set({
+      'nextRegeneration': nextTimestamp,
+      'budget': budget,
+      'period': period,
+      'autoRegenerateIncome': true,
+    });
   }
 
   @override
@@ -59,14 +107,15 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
                   _selectedPeriod = newValue!;
                 });
               },
-              items: <String>['Daily', 'Weekly', 'Monthly']
+              items: <String>['daily', 'weekly', 'monthly'] // Ensure lowercase matches _selectedPeriod
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
-                  child: Text(value),
+                  child: Text(value[0].toUpperCase() + value.substring(1)), // Capitalize for display
                 );
               }).toList(),
             ),
+
             SizedBox(height: 20),
             CheckboxListTile(
               title: Text("Automatically regenerate income after each selected period"),
@@ -87,7 +136,7 @@ class _SetBudgetPageState extends State<SetBudgetPage> {
                   _carryOverExcessIncome = value!;
                 });
               }
-                  : null, // Disable if auto-regenerate income is unchecked
+                  : null,
             ),
             SizedBox(height: 20),
             ElevatedButton(

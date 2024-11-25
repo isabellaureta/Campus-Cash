@@ -164,17 +164,16 @@ class _BudgetSummaryPageState extends State<BudgetSummaryPage> with SingleTicker
         final amount = category['amount'] ?? 0.0;
         final originalAmount = category['originalAmount'] ?? 0.0;
 
-        // Determine category style based on the amount
         TextStyle textStyle;
         if (amount == 0.0) {
           textStyle = TextStyle(
             color: Colors.grey,
-            decoration: TextDecoration.lineThrough, // Strikethrough for completed
+            decoration: TextDecoration.lineThrough,
           );
         } else if (amount < 0.0) {
-          textStyle = TextStyle(color: Colors.red, fontWeight: FontWeight.bold); // Red for overspending
+          textStyle = TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
         } else {
-          textStyle = TextStyle(color: Colors.black); // Default
+          textStyle = TextStyle(color: Colors.black);
         }
 
         return ListTile(

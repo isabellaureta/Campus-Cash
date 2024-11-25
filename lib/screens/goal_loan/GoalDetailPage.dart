@@ -151,6 +151,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
                       selectedFrequency,
                       selectedEndDate,
                     );
+                    Navigator.pop(context);
                   },
                   child: Text('Update'),
                 )
@@ -166,6 +167,26 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    double remainingAmount = goalAmount - goalData['savedAmount'];
+    final duration = endDate != null ? endDate.difference(DateTime.now()) : Duration.zero;
+    int periods;
+
+    switch (frequency) {
+      case 'Daily':
+        periods = duration.inDays;
+        break;
+      case 'Weekly':
+        periods = (duration.inDays / 7).ceil();
+        break;
+      case 'Monthly':
+        periods = (duration.inDays / 30).ceil();
+        break;
+      default:
+        periods = 0;
+    }
+
+    double newRequiredSavings = periods > 0 ? remainingAmount / periods : 0;
+
     DocumentReference goalDoc = FirebaseFirestore.instance
         .collection('goals')
         .doc(user.uid)
@@ -177,6 +198,7 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       'goalAmount': goalAmount,
       'frequency': frequency,
       'endDate': endDate != null ? Timestamp.fromDate(endDate) : null,
+      'requiredSavings': newRequiredSavings,
     });
 
     setState(() {
@@ -184,8 +206,9 @@ class _GoalDetailPageState extends State<GoalDetailPage> {
       goalData['goalAmount'] = goalAmount;
       goalData['frequency'] = frequency;
       goalData['endDate'] = endDate != null ? Timestamp.fromDate(endDate) : null;
+      goalData['requiredSavings'] = newRequiredSavings;
       progress = goalAmount > 0 ? goalData['savedAmount'] / goalAmount : 0;
-      _calculateRequiredSavings();
+      requiredSavings = newRequiredSavings;
     });
   }
 

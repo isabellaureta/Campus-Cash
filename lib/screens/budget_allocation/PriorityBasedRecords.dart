@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:expense_repository/repositories.dart';
 import 'package:intl/intl.dart';
 
+import '../home/views/main_screen.dart';
+
 class PriorityBasedRecords extends StatefulWidget {
   final List<Category> selectedCategories;
 
@@ -71,10 +73,11 @@ class _PriorityBasedRecordsState extends State<PriorityBasedRecords> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Allocation saved successfully!')),
     );
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => PriorityBasedSummary(userId: user.uid)),
-    );
+    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.pop(context);
+    Navigator.pop(context);
+
   }
 
   @override
@@ -248,8 +251,8 @@ class _PriorityBasedSummaryState extends State<PriorityBasedSummary> {
               child: const Text("No"),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-        child: const Text("Yes"),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Yes"),
             ),
           ],
         );
@@ -257,15 +260,24 @@ class _PriorityBasedSummaryState extends State<PriorityBasedSummary> {
     );
 
     if (confirmation == true) {
-      await FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Allocation deleted successfully.')),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => BudgetSelectionPage()),
-      );
+      try {
+        await FirebaseFirestore.instance.collection('PriorityBased').doc(widget.userId).delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Priority Based Records deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting allocation: ${e.toString()}')),
+          );
+        }
+      }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {

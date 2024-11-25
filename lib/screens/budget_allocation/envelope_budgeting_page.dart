@@ -230,14 +230,10 @@ class _AllocationPageState extends State<AllocationPage> {
         SnackBar(content: Text('Allocations saved successfully!')),
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EnvelopeBudgetingPage(
-            allocations: validAllocations,
-          ),
-        ),
-      );
+      Navigator.pop(context);
+      Navigator.pop(context);
+      Navigator.pop(context);
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save allocations: $e')),
@@ -251,7 +247,7 @@ class _AllocationPageState extends State<AllocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat('#,##0.00'); // Define the number formatter
+    final numberFormat = NumberFormat('#,##0.00');
     return Scaffold(
       appBar: AppBar(
         title: Text('Allocate Your Budget'),

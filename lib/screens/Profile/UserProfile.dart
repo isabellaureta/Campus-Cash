@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 import '../home/views/login_view.dart';
 import '../home/views/welcome_view.dart';
 import 'Notifications.dart';
@@ -24,11 +25,13 @@ class _ProfilePageState extends State<ProfilePage> {
   File? _imageFile;
   final NotificationHelper _notificationHelper = NotificationHelper();
   TimeOfDay _selectedTime = TimeOfDay(hour: 20, minute: 0);
+  List<Map<String, dynamic>> _recurringExpenses = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _fetchRecurringExpenses();
   }
 
   void _loadUserProfile() async {
@@ -83,7 +86,6 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
   }
-
 
   void _deleteAccount() async {
     showDialog(
@@ -303,9 +305,115 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: _deleteAccount,
               child: Text('Delete Account', style: TextStyle(color: Colors.white)),
             ),
+            SizedBox(height: 16),
+            if (_recurringExpenses.isNotEmpty) ...[
+              const Text(
+                'Recurring Expenses:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: _recurringExpenses.map((expense) {
+                  return Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.grey.shade300,
+                        child: Image.asset(expense['category']['icon']),
+                      ),
+                      title: Text(expense['category']['name']),
+                      subtitle: Text(
+                        'Amount: ₱${expense['amount']} | Date: ${DateFormat('dd/MM/yyyy').format((expense['date'] as Timestamp).toDate())}',
+                      ),
+                      onTap: () => _showRecurringExpenseDetails(context, expense),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
+
       ),
     );
+  }
+
+  void _showRecurringExpenseDetails(BuildContext context, Map<String, dynamic> expense) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Recurring Expense Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Category: ${expense['category']['name']}'),
+              Text('Amount: ₱${expense['amount']}'),
+              Text('Frequency: ${expense['frequency']}'),
+              Text('Start Date: ${DateFormat('dd/MM/yyyy').format((expense['startDate'] as Timestamp).toDate())}'),
+              Text('End Date: ${DateFormat('dd/MM/yyyy').format((expense['endDate'] as Timestamp).toDate())}'),
+              if (expense['description'] != null)
+                Text('Description: ${expense['description']}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                await _stopRecurringExpense(expense['docId']);
+                Navigator.pop(context);
+              },
+              child: const Text('Stop Recurring'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _stopRecurringExpense(String docId) async {
+    try {
+      await _firestore.collection('expenses').doc(docId).update({
+        'isRecurring': false,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Recurring expense stopped successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _fetchRecurringExpenses(); // Refresh the list
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to stop recurring expense: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
+  Future<void> _fetchRecurringExpenses() async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    final snapshot = await _firestore
+        .collection('expenses')
+        .where('userId', isEqualTo: user.uid)
+        .where('isRecurring', isEqualTo: true)
+        .get();
+
+    setState(() {
+      _recurringExpenses = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id; // Include document ID for deletion
+        return data;
+      }).toList();
+    });
   }
 }

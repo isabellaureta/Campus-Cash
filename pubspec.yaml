@@ -64,8 +64,8 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image path: assets/CampusCashLogo.png
-  adaptive_icon_foreground: assets/CampusCashLogo.png
+  image_path: "assets/CampCash.png"
+  adaptive_icon_foreground: "assets/CampCash.png"
 
 flutter:
   generate: true
